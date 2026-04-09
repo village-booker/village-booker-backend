@@ -36,7 +36,7 @@ public class Usluga {
     private int minBrOsoba;
     
     @Enumerated(EnumType.STRING)
-    private Tip tip;
+    private TipUsluge tipUsluge;
     
     @Column(name = "broj_recenzija")
     private int brojRecenzija;
