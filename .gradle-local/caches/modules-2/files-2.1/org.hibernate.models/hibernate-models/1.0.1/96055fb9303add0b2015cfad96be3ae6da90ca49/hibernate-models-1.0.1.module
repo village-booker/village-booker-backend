@@ -1,0 +1,109 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.hibernate.models",
+    "module": "hibernate-models",
+    "version": "1.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "hibernate-models-1.0.1.jar",
+          "url": "hibernate-models-1.0.1.jar",
+          "size": 217761,
+          "sha512": "63119b7a45c0d3e6a4fcdd834068dd5662e05c54dd4a96ea12a42e3b8d4b00642d80bb37bb07cd4e5f785a8f1530afb40f3b573bda4eea9072500029aef452d6",
+          "sha256": "bdb42c4979001742ebc098f3b206dd1057dc93be55c50a31c3f027d3eed06412",
+          "sha1": "3158c5f9309494b905de62c72f6f02d108aea651",
+          "md5": "911e7ad11382712f0869328465937718"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jboss.logging",
+          "module": "jboss-logging",
+          "version": {
+            "requires": "3.5.0.Final"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "hibernate-models-1.0.1.jar",
+          "url": "hibernate-models-1.0.1.jar",
+          "size": 217761,
+          "sha512": "63119b7a45c0d3e6a4fcdd834068dd5662e05c54dd4a96ea12a42e3b8d4b00642d80bb37bb07cd4e5f785a8f1530afb40f3b573bda4eea9072500029aef452d6",
+          "sha256": "bdb42c4979001742ebc098f3b206dd1057dc93be55c50a31c3f027d3eed06412",
+          "sha1": "3158c5f9309494b905de62c72f6f02d108aea651",
+          "md5": "911e7ad11382712f0869328465937718"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "hibernate-models-1.0.1-javadoc.jar",
+          "url": "hibernate-models-1.0.1-javadoc.jar",
+          "size": 1066496,
+          "sha512": "1e69c355a279209d8735be8a9315b12b84fc0fbe6349fb975d986a6240b0c353e89897cbc173e7a03340479a4d2270dfa912c52307f4c159c4f855ea0a644182",
+          "sha256": "bd16f9fdea234394db08de5197222d2b0f3d555e4b11ccf3a0ba52fc80eb7b7d",
+          "sha1": "9fe30ff1da6732005c3fdd5c725919a46b236342",
+          "md5": "c4904dad6e0e7b5c9dd8e1b82fb1e039"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "hibernate-models-1.0.1-sources.jar",
+          "url": "hibernate-models-1.0.1-sources.jar",
+          "size": 134472,
+          "sha512": "71bb532b65dc9efa009f8746c4a35885880eb5e78de230ad1862194f78612afe352079425f4014a2d26c5c4ec80e07b8a1b249c908d93c63fb52b90bc3d040e0",
+          "sha256": "c7497b7123048cf73b9f934474cec26165710c1f7b4a788f72551077a9238cec",
+          "sha1": "b4647f684734124c8fe8d1b0f447c35aa06c1968",
+          "md5": "8c532002331a31c2badac21660c6bcb7"
+        }
+      ]
+    }
+  ]
+}

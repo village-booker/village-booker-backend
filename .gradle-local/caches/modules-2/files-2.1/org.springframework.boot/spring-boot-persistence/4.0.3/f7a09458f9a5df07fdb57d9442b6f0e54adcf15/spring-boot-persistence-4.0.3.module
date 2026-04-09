@@ -1,0 +1,132 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework.boot",
+    "module": "spring-boot-persistence",
+    "version": "4.0.3",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.3.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot",
+          "version": {
+            "requires": "4.0.3"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-tx",
+          "version": {
+            "requires": "7.0.5"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-persistence-4.0.3.jar",
+          "url": "spring-boot-persistence-4.0.3.jar",
+          "size": 16032,
+          "sha512": "013d763c2528bf70f17151538d69909bf34f5eb2810db11354a8b48a61a6a885b48efb972cc4fac46725e3da209ef9b32739e45629918fa8f0dbf1ab2c80dc01",
+          "sha256": "2b88543e4475ea18ec3903439fd150fbfe28192903852d078c653233e58c2a57",
+          "sha1": "58ed08c6834a22536086d650a34a733baf37313d",
+          "md5": "08ec0a2ed57e42b2090cf5267a2a7f96"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot",
+          "version": {
+            "requires": "4.0.3"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-tx",
+          "version": {
+            "requires": "7.0.5"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-persistence-4.0.3.jar",
+          "url": "spring-boot-persistence-4.0.3.jar",
+          "size": 16032,
+          "sha512": "013d763c2528bf70f17151538d69909bf34f5eb2810db11354a8b48a61a6a885b48efb972cc4fac46725e3da209ef9b32739e45629918fa8f0dbf1ab2c80dc01",
+          "sha256": "2b88543e4475ea18ec3903439fd150fbfe28192903852d078c653233e58c2a57",
+          "sha1": "58ed08c6834a22536086d650a34a733baf37313d",
+          "md5": "08ec0a2ed57e42b2090cf5267a2a7f96"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-persistence-4.0.3-javadoc.jar",
+          "url": "spring-boot-persistence-4.0.3-javadoc.jar",
+          "size": 117771,
+          "sha512": "ccfd1153b6e4cc055dd072d307c15b007b2fbb20351e51d7fb0116f9dc578cd6513fdd44de3a2e32c108e0d848651768599b7a085dd8e6c95c8bcc1a23ea3d6b",
+          "sha256": "c9cef4f496c55d225b4f014434cd52734086cd55b2f21935c88092dc1baa54b3",
+          "sha1": "a0c17ab1932f6e5852d691c890c8f60df0c72a96",
+          "md5": "a73b1eed430e3cbb80c464309da1d47a"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-persistence-4.0.3-sources.jar",
+          "url": "spring-boot-persistence-4.0.3-sources.jar",
+          "size": 13230,
+          "sha512": "9cf09cb8d45e5fb9546614a38dd1463d88c7839d90e84ea8e604df37ddaf516b5656ffb565021eb20999fb0c8f775bdeded6ba881621ca2bf251b107794718c8",
+          "sha256": "ddc53eb0fe9efb0935b4d4c929fbc87ffe287b1a0da5e90e652daf340e2ad72d",
+          "sha1": "3d1a66a2e07c318320ac665721249a7e70d7d640",
+          "md5": "4f29628258dd235beedefce074aa2786"
+        }
+      ]
+    }
+  ]
+}
