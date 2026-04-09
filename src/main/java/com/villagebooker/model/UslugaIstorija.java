@@ -1,9 +1,10 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -11,7 +12,8 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name="uslugaistorija")
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,7 +21,7 @@ public class UslugaIstorija {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usluga_id")
@@ -27,12 +29,14 @@ public class UslugaIstorija {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name="staripodaci", columnDefinition = "jsonb")
-    private Map<String, Object> staripodaci;
+    private Map<String, Object> stariPodaci;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name="novipodaci", columnDefinition = "jsonb")
-    private Map<String, Object> novipodaci;
+    private Map<String, Object> noviPodaci;
 
-    private LocalDateTime vreme_promene;
+    @Column(name = "vreme_promene")
+    private LocalDateTime vremePromene;
+    
     private String uzrok;
 }

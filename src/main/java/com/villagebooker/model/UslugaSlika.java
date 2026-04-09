@@ -1,14 +1,17 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name="uslugaslika")
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,7 +19,7 @@ public class UslugaSlika {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usluga_id")
@@ -24,5 +27,8 @@ public class UslugaSlika {
 
     private String url;
     private int redosled;
-    private LocalDateTime kreirana_at = LocalDateTime.now();
+    
+    @CreationTimestamp
+    @Column(name = "kreirana_at")
+    private LocalDateTime kreiranaAt;
 }

@@ -1,21 +1,28 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
 @Table(name="smestaj")
 @AllArgsConstructor
 @NoArgsConstructor
-public class Smestaj extends Usluga{
+public class Smestaj extends Usluga {
 
-    private float cena_po_danu;
-    private int broj_francusko_lezaj;
-    private int broj_kreveta_solo;
-    private int broj_soba;
+    @Column(name = "cena_po_danu")
+    private float cenaPoNoci;
+    
+    @Column(name = "broj_francuski_lezaj")
+    private int brojFrancuskihLezaja;
+    
+    @Column(name = "broj_kreveta_solo")
+    private int brojKrevetaSolo;
+    
+    @Column(name = "broj_soba")
+    private int brojSoba;
 }

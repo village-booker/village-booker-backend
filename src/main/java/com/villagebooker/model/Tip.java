@@ -1,4 +1,4 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 public enum Tip {
     SMESTAJ, IZLET

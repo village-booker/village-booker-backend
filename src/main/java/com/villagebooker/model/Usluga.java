@@ -1,12 +1,16 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name="usluga")
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,7 +19,8 @@ public class Usluga {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int usluga_id;
+    @Column(name = "usluga_id")
+    private Long uslugaId;
 
     private String naziv;
     
@@ -23,13 +28,36 @@ public class Usluga {
     private StatusUsluge status;
     
     private String opis;
-    private int maks_br_osoba;
-    private int min_br_osoba;
+    
+    @Column(name = "maks_br_osoba")
+    private int maksBrOsoba;
+    
+    @Column(name = "min_br_osoba")
+    private int minBrOsoba;
     
     @Enumerated(EnumType.STRING)
     private Tip tip;
     
-    private int broj_recenzija;
+    @Column(name = "broj_recenzija")
+    private int brojRecenzija;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "politika_otkazivanja")
+    private PolitikaOtkazivanja politikaOtkazivanja;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "nacin_placanja")
+    private NacinPlacanja nacinPlacanja;
+
+    @Column(name = "kapara_procenat")
+    private Integer kaparaProcenat;
+
+    @Column(name = "rok_besplatnog_otkazivanja")
+    private Integer rokBesplatnogOtkazivanja;
+
+    @Column(name = "procenat_povrata")
+    private Integer procentatPovrata;
+
     private String adresa;
     private String mesto;
     private String opstina;
@@ -43,13 +71,13 @@ public class Usluga {
     private Korisnik vlasnik;
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<UslugaSlika> slike;
+    private List<UslugaSlika> slike;
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<UslugaIstorija> istorija;
+    private List<UslugaIstorija> istorija;
 
-    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private java.util.List<Rezervacija> rezervacije;
+    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY)
+    private List<Rezervacija> rezervacije;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -57,6 +85,6 @@ public class Usluga {
         joinColumns = @JoinColumn(name = "usluga_id"),
         inverseJoinColumns = @JoinColumn(name = "karakteristika_id")
     )
-    private java.util.List<Karakteristika> karakteristike;
+    private List<Karakteristika> karakteristike;
 
 }

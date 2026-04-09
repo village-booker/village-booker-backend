@@ -1,14 +1,18 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name="rezervacija")
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,7 +20,8 @@ public class Rezervacija {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int rezervacija_id;
+    @Column(name = "rezervacija_id")
+    private Long rezervacijaId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "korisnik_id")
@@ -26,16 +31,30 @@ public class Rezervacija {
     @JoinColumn(name = "usluga_id")
     private Usluga usluga;
 
-    private LocalDateTime vreme_rezervisanja = LocalDateTime.now();
-    private float ukupna_cena;
-    private float preostalo_za_platiti;
-    private LocalDateTime rezervacija_od;
-    private LocalDateTime rezervacija_do;
-    private int broj_dana;
+    @CreationTimestamp
+    @Column(name = "vreme_rezervisanja")
+    private LocalDateTime vremeRezervisanja;
+    
+    @Column(name = "ukupna_cena")
+    private float ukupnaCena;
+    
+    @Column(name = "preostalo_za_platiti")
+    private float preostaloZaPlatiti;
+    
+    @Column(name = "rezervacija_od")
+    private LocalDate rezervacijaOd;
+    
+    @Column(name = "rezervacija_do")
+    private LocalDate rezervacijaDo;
+    
+    @Column(name = "broj_dana")
+    private int brojDana;
     
     @Enumerated(EnumType.STRING)
     private StatusRezervacije status;
     
-    private int br_osoba;
+    @Column(name = "br_osoba")
+    private int brOsoba;
+    
     private String napomena;
 }

@@ -1,4 +1,4 @@
-package com.example.demo.model;
+package com.villagebooker.model;
 
 public enum StatusOmiljene {
     AKTIVNA, NEAKTIVNA
