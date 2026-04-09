@@ -19,10 +19,10 @@ public class UslugaIstorija {
     private int usluga_id;
 
     @JdbcTypeCode(SqlTypes.JSON) @Column(name="staripodaci", columnDefinition = "jsonb")
-    private Map<String, Object> staripodaci;
+    private Map<String, Object> staro_stanje;
 
     @JdbcTypeCode(SqlTypes.JSON) @Column(name="novipodaci", columnDefinition = "jsonb")
-    private Map<String, Object> novipodaci;
+    private Map<String, Object> novo_stanje;
 
     private LocalDateTime vreme_promene;
     private String uzrok;

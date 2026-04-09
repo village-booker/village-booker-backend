@@ -1,8 +1,8 @@
 package com.example.demo.model;
 
-public class Izlet extends Usluga{
+public class Tura extends Usluga{
 
     private int broj_dana;
-    private int tezina;
+    private TezinaTure tezina_ture;
     private float cena;
 }

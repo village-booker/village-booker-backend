@@ -21,4 +21,5 @@ public class Korisnik {
     private LocalDateTime kreiran_at = LocalDateTime.now();
     private String bankovni_racun;
     private Uloga uloga;
+    private String slikaUrl;
 }
