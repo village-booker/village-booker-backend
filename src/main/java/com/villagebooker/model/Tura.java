@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Getter
 @Setter
@@ -21,5 +23,6 @@ public class Tura extends Usluga {
     @Column(name = "tezina_ture")
     private TezinaTure tezinaTure;
 
-    private float cena;
+    @Column(precision = 19, scale = 2)
+    private BigDecimal cena;
 }

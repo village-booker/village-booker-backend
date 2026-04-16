@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -35,11 +36,11 @@ public class Rezervacija {
     @Column(name = "vreme_rezervisanja")
     private LocalDateTime vremeRezervisanja;
     
-    @Column(name = "ukupna_cena")
-    private float ukupnaCena;
+    @Column(name = "ukupna_cena", precision = 19, scale = 2)
+    private BigDecimal ukupnaCena;
     
-    @Column(name = "preostalo_za_platiti")
-    private float preostaloZaPlatiti;
+    @Column(name = "preostalo_za_platiti", precision = 19, scale = 2)
+    private BigDecimal preostaloZaPlatiti;
     
     @Column(name = "rezervacija_od")
     private LocalDate rezervacijaOd;

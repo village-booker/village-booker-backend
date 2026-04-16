@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Getter
 @Setter
@@ -14,8 +16,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Smestaj extends Usluga {
 
-    @Column(name = "cena_po_danu")
-    private float cenaPoNoci;
+    @Column(name = "cena_po_danu", precision = 19, scale = 2)
+    private BigDecimal cenaPoNoci;
     
     @Column(name = "broj_francuski_lezaj")
     private int brojFrancuskihLezaja;
