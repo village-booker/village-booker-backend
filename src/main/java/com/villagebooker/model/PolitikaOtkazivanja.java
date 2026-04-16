@@ -1,5 +1,7 @@
 package com.villagebooker.model;
 
-enum PolitikaOtkazivanja{
-    BESPLATNO, PARCIJALNO, BEZ_POVRATA
+public enum PolitikaOtkazivanja {
+    BESPLATNO,
+    PARCIJALNO,
+    BEZ_POVRATA
 }

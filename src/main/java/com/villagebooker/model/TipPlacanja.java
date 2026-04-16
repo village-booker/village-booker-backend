@@ -1,5 +1,7 @@
 package com.villagebooker.model;
 
-enum TipPlacanja{
-    KAPARA, OSTATAK, PUNO
+public enum TipPlacanja {
+    KAPARA,
+    OSTATAK,
+    PUNO
 }
