@@ -18,9 +18,10 @@ public class Karakteristika {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name= "id")
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, name = "naziv")
     private String naziv;
 
     @ManyToMany(mappedBy = "karakteristike", fetch = FetchType.LAZY)

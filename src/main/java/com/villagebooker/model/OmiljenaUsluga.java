@@ -19,14 +19,15 @@ public class OmiljenaUsluga {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "korisnik_id")
+    @JoinColumn(name = "korisnik_id", nullable = false)
     private Korisnik korisnik;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id")
+    @JoinColumn(name = "usluga_id", nullable = false)
     private Usluga usluga;
 
     @CreationTimestamp
@@ -37,5 +38,6 @@ public class OmiljenaUsluga {
     private LocalDateTime datumBrisanja;
     
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private StatusOmiljene status;
 }

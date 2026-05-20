@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
@@ -19,27 +20,52 @@ public class Usluga {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "usluga_id")
-    private Long uslugaId;
+    @Column(name = "id")
+    private Long id;
 
+    @Column(name = "naziv")
     private String naziv;
     
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private StatusUsluge status;
-    
+
+    @Column(name = "opis")
     private String opis;
     
     @Column(name = "maks_br_osoba")
-    private int maksBrOsoba;
+    private Integer maksBrOsoba;
     
     @Column(name = "min_br_osoba")
-    private int minBrOsoba;
+    private Integer minBrOsoba;
     
     @Enumerated(EnumType.STRING)
+    @Column(name = "tip_usluge")
     private TipUsluge tipUsluge;
     
     @Column(name = "broj_recenzija")
-    private int brojRecenzija;
+    private Integer brojRecenzija;
+
+    @Column(name = "adresa")
+    private String adresa;
+
+    @Column(name = "mesto")
+    private String mesto;
+
+    @Column(name = "opstina")
+    private String opstina;
+
+    @Column(name = "okrug")
+    private String okrug;
+
+    @Column(name = "ocena")
+    private BigDecimal ocena;
+
+    @Column(name = "latitude")
+    private BigDecimal latitude;
+
+    @Column(name = "longitude")
+    private BigDecimal  longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "politika_otkazivanja")
@@ -50,24 +76,16 @@ public class Usluga {
     private NacinPlacanja nacinPlacanja;
 
     @Column(name = "kapara_procenat")
-    private Integer kaparaProcenat;
+    private BigDecimal kaparaProcenat;
 
     @Column(name = "rok_besplatnog_otkazivanja")
     private Integer rokBesplatnogOtkazivanja;
 
     @Column(name = "procenat_povrata")
-    private Integer procentatPovrata;
+    private BigDecimal procenatPovrata;
 
-    private String adresa;
-    private String mesto;
-    private String opstina;
-    private String okrug;
-    private float ocena;
-    private float latitude;
-    private float longitude;
-    
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vlasnik_id")
+    @JoinColumn(name = "korisnik_id")
     private Korisnik vlasnik;
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
@@ -78,6 +96,12 @@ public class Usluga {
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY)
     private List<Rezervacija> rezervacije;
+
+    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY)
+    private List<ZahtevZaIzmenuUsluge> zahtevi;
+
+    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NedostupanPeriod> nedostupniPeriodi;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

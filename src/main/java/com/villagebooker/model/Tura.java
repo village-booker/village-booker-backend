@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 public class Tura extends Usluga {
 
     @Column(name = "broj_dana")
-    private int brojDana;
+    private Integer brojDana;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tezina_ture")

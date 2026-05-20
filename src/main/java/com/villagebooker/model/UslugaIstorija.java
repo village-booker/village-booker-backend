@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -21,6 +22,7 @@ public class UslugaIstorija {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,15 +30,17 @@ public class UslugaIstorija {
     private Usluga usluga;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name="staripodaci", columnDefinition = "jsonb")
-    private Map<String, Object> stariPodaci;
+    @Column(name="staro_stanje", columnDefinition = "jsonb")
+    private Map<String, Object> staroStanje;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name="novipodaci", columnDefinition = "jsonb")
-    private Map<String, Object> noviPodaci;
+    @Column(name="novo_stanje", columnDefinition = "jsonb")
+    private Map<String, Object> novoStanje;
 
+    @CreationTimestamp
     @Column(name = "vreme_promene")
     private LocalDateTime vremePromene;
-    
+
+    @Column(name = "uzrok")
     private String uzrok;
 }

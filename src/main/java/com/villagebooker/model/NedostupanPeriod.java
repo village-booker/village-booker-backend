@@ -5,34 +5,31 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-@Table(name="uslugaslika")
+@Table(name="nedostupanperiod")
 @AllArgsConstructor
 @NoArgsConstructor
-public class UslugaSlika {
-
+public class NedostupanPeriod {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "datum_od")
+    private LocalDateTime datum_od;
+
+    @Column(name = "datum_do")
+    private LocalDateTime datum_do;
+
+    @Column(name = "razlog")
+    private String razlog;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id")
+    @JoinColumn(name = "usluga_id", nullable = false)
     private Usluga usluga;
-
-    @Column(name = "url")
-    private String url;
-
-    @Column(name = "redosled")
-    private Integer redosled;
-    
-    @CreationTimestamp
-    @Column(name = "kreirana_at")
-    private LocalDateTime kreiranaAt;
 }
