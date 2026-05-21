@@ -29,10 +29,10 @@ public class Korisnik {
     @Column(name = "prezime")
     private String prezime;
 
-    @Column(name = "email")
+    @Column(name = "email", nullable = false)
     private String email;
 
-    @Column(name = "sifra")
+    @Column(name = "sifra", nullable = false)
     private String sifra;
 
     @Column(name = "telefon")
@@ -42,14 +42,14 @@ public class Korisnik {
     private String slikaUrl;
     
     @CreationTimestamp
-    @Column(name = "kreiran_at")
+    @Column(name = "kreiran_at", nullable = false, updatable = false)
     private LocalDateTime kreiranAt;
     
     @Column(name = "bankovni_racun")
     private String bankovniRacun;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "uloga")
+    @Column(name = "uloga", nullable = false)
     private Uloga uloga;
     
     @OneToMany(mappedBy = "vlasnik", fetch = FetchType.LAZY)

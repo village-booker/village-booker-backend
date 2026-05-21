@@ -1,10 +1,7 @@
 package com.villagebooker.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +12,7 @@ import java.util.List;
 @Table(name="usluga")
 @AllArgsConstructor
 @NoArgsConstructor
-@Inheritance(strategy = InheritanceType.JOINED)
+@MappedSuperclass
 public class Usluga {
 
     @Id
@@ -23,28 +20,31 @@ public class Usluga {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "naziv")
+    @Column(name = "naziv", nullable = false)
     private String naziv;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private StatusUsluge status;
 
     @Column(name = "opis")
     private String opis;
+
+    @Column(name = "zahteva_potvrdu_vlasnika", nullable = false)
+    private boolean zahtevaPotvdruVlasnika = false;
     
-    @Column(name = "maks_br_osoba")
+    @Column(name = "maks_br_osoba", nullable = false)
     private Integer maksBrOsoba;
     
-    @Column(name = "min_br_osoba")
+    @Column(name = "min_br_osoba", nullable = false)
     private Integer minBrOsoba;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "tip_usluge")
+    @Column(name = "tip_usluge", nullable = false)
     private TipUsluge tipUsluge;
     
-    @Column(name = "broj_recenzija")
-    private Integer brojRecenzija;
+    @Column(name = "broj_recenzija", nullable = false)
+    private Integer brojRecenzija = 0;
 
     @Column(name = "adresa")
     private String adresa;
@@ -61,18 +61,18 @@ public class Usluga {
     @Column(name = "ocena")
     private BigDecimal ocena;
 
-    @Column(name = "latitude")
+    @Column(name = "latitude", nullable = false)
     private BigDecimal latitude;
 
-    @Column(name = "longitude")
+    @Column(name = "longitude", nullable = false)
     private BigDecimal  longitude;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "politika_otkazivanja")
+    @Column(name = "politika_otkazivanja", nullable = false)
     private PolitikaOtkazivanja politikaOtkazivanja;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "nacin_placanja")
+    @Column(name = "nacin_placanja", nullable = false)
     private NacinPlacanja nacinPlacanja;
 
     @Column(name = "kapara_procenat")
@@ -85,7 +85,7 @@ public class Usluga {
     private BigDecimal procenatPovrata;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "korisnik_id")
+    @JoinColumn(name = "vlasnik_id", nullable = false)
     private Korisnik vlasnik;
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)

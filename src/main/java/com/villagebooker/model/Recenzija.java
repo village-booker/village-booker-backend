@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -29,7 +30,8 @@ public class Recenzija {
     @Column(name = "odgovor")
     private String odgovor;
 
-    @Column(name = "datum")
+    @CreationTimestamp
+    @Column(name = "datum", nullable = false)
     private LocalDateTime datum;
 
     @OneToOne(fetch = FetchType.LAZY)

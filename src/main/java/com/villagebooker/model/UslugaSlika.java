@@ -23,16 +23,16 @@ public class UslugaSlika {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id")
+    @JoinColumn(name = "usluga_id", nullable = false)
     private Usluga usluga;
 
-    @Column(name = "url")
+    @Column(name = "url", nullable = false)
     private String url;
 
-    @Column(name = "redosled")
+    @Column(name = "redosled", nullable = false)
     private Integer redosled;
     
     @CreationTimestamp
-    @Column(name = "kreirana_at")
+    @Column(name = "kreirana_at", nullable = false)
     private LocalDateTime kreiranaAt;
 }

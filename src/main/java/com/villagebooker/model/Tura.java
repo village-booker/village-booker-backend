@@ -16,13 +16,13 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class Tura extends Usluga {
 
-    @Column(name = "broj_dana")
+    @Column(name = "broj_dana", nullable = false)
     private Integer brojDana;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tezina_ture")
+    @Column(name = "tezina_ture", nullable = false)
     private TezinaTure tezinaTure;
 
-    @Column(precision = 19, scale = 2)
-    private BigDecimal cena;
+    @Column(precision = 19, scale = 2, nullable = false, name= "cena_po_osobi")
+    private BigDecimal cenaPoOsobi;
 }

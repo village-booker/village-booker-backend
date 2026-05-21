@@ -26,7 +26,7 @@ public class UslugaIstorija {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id")
+    @JoinColumn(name = "usluga_id", nullable = false)
     private Usluga usluga;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -38,7 +38,7 @@ public class UslugaIstorija {
     private Map<String, Object> novoStanje;
 
     @CreationTimestamp
-    @Column(name = "vreme_promene")
+    @Column(name = "vreme_promene", nullable = false)
     private LocalDateTime vremePromene;
 
     @Column(name = "uzrok")

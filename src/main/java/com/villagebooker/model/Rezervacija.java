@@ -26,41 +26,41 @@ public class Rezervacija {
     private Long id;
 
     @CreationTimestamp
-    @Column(name = "vreme_rezervisanja")
+    @Column(name = "vreme_rezervisanja", nullable = false)
     private LocalDateTime vremeRezervisanja;
     
-    @Column(name = "ukupna_cena", precision = 19, scale = 2)
+    @Column(name = "ukupna_cena", precision = 19, scale = 2, nullable = false)
     private BigDecimal ukupnaCena;
     
-    @Column(name = "preostalo_za_platiti", precision = 19, scale = 2)
+    @Column(name = "preostalo_za_platiti", precision = 19, scale = 2, nullable = false)
     private BigDecimal preostaloZaPlatiti;
     
-    @Column(name = "rezervacija_od")
+    @Column(name = "rezervacija_od", nullable = false)
     private LocalDate rezervacijaOd;
     
-    @Column(name = "rezervacija_do")
+    @Column(name = "rezervacija_do", nullable = false)
     private LocalDate rezervacijaDo;
     
-    @Column(name = "broj_dana")
+    @Column(name = "broj_dana", nullable = false)
     private Integer brojDana;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private StatusRezervacije status;
     
-    @Column(name = "br_osoba")
+    @Column(name = "br_osoba", nullable = false)
     private Integer brOsoba;
 
     @Column(name = "napomena")
     private String napomena;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "korisnik_id")
-    private Korisnik korisnik;
+    @JoinColumn(name = "gost_id")
+    private Korisnik gost;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_id")
-    private Korisnik admin;
+    @JoinColumn(name = "vlasnik_id")
+    private Korisnik vlasnik;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usluga_id")

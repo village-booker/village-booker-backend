@@ -16,15 +16,21 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class Smestaj extends Usluga {
 
-    @Column(name = "cena_po_noci", precision = 19, scale = 2)
-    private BigDecimal cenaPoNoci;
-    
-    @Column(name = "broj_francuski_lezaj")
+    @Column(name = "bazna_cena_noci", precision = 19, scale = 2, nullable = false)
+    private BigDecimal baznaCenaNoci;
+
+    @Column(name = "bazan_br_osoba", nullable = false)
+    private Integer bazanBrOsoba;
+
+    @Column(name = "dodatna_cena_osoba", precision = 19, scale = 2, nullable = false)
+    private BigDecimal dodatnaCenaOsoba;
+
+    @Column(name = "broj_francuski_lezaj", nullable = false)
     private Integer brojFrancuskihLezaja;
     
-    @Column(name = "broj_kreveta_solo")
+    @Column(name = "broj_kreveta_solo", nullable = false)
     private Integer brojKrevetaSolo;
     
-    @Column(name = "broj_soba")
+    @Column(name = "broj_soba", nullable = false)
     private Integer brojSoba;
 }

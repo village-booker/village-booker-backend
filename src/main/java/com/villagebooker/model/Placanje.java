@@ -22,11 +22,11 @@ public class Placanje {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "iznos")
+    @Column(name = "iznos", nullable = false)
     private BigDecimal iznos;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private StatusPlacanja status;
 
     @Column(name = "stripe_payment_id")
@@ -36,14 +36,14 @@ public class Placanje {
     private String StripeRefundId;
 
     @CreationTimestamp
-    @Column(name = "vreme")
+    @Column(name = "vreme", nullable = false)
     private LocalDateTime vreme;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "nacin")
+    @Column(name = "nacin", nullable = false)
     private NacinPlacanja nacin;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rezervacija_id")
+    @JoinColumn(name = "rezervacija_id", nullable = false)
     private Rezervacija rezervacija;
 }

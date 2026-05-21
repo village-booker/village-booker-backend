@@ -20,10 +20,10 @@ public class NedostupanPeriod {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "datum_od")
+    @Column(name = "datum_od", nullable = false)
     private LocalDateTime datum_od;
 
-    @Column(name = "datum_do")
+    @Column(name = "datum_do", nullable = false)
     private LocalDateTime datum_do;
 
     @Column(name = "razlog")

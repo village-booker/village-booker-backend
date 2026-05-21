@@ -28,9 +28,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -48,3 +49,20 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+def loadDotEnv() {
+    def envFile = file(".env")
+    if (envFile.exists()) {
+        envFile.eachLine { line ->
+            def (key, value) = line.split('=')
+            System.setProperty(key, value)
+            // Or set as a project property
+            project.ext.set(key, value)
+        }
+    }
+}
+
+loadDotEnv()
+
+println "Loaded API Key: ${project.hasProperty('DB_USERNAME') ? DB_USERNAME : 'Not Found'}"
+

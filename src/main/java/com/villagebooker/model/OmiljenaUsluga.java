@@ -31,13 +31,13 @@ public class OmiljenaUsluga {
     private Usluga usluga;
 
     @CreationTimestamp
-    @Column(name = "datum_dodavanja")
+    @Column(name = "datum_dodavanja", nullable = false)
     private LocalDateTime datumDodavanja;
     
     @Column(name = "datum_brisanja")
     private LocalDateTime datumBrisanja;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private StatusOmiljene status;
 }

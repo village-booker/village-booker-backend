@@ -29,11 +29,11 @@ public class ZahtevZaIzmenuUsluge {
     private Map<String, Object> podaciZaIzmenu;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private StatusZahteva status;
 
     @CreationTimestamp
-    @Column(name = "kreiran_at")
+    @Column(name = "kreiran_at", nullable = false)
     private LocalDateTime kreiran_at;
 
     @ManyToOne(fetch = FetchType.LAZY)
