@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 @Table(name="smestaj")
 @AllArgsConstructor
 @NoArgsConstructor
+@DiscriminatorValue("SMESTAJ")
+@PrimaryKeyJoinColumn(name = "usluga_id")
 public class Smestaj extends Usluga {
 
     @Column(name = "bazna_cena_noci", precision = 19, scale = 2, nullable = false)

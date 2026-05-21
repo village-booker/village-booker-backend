@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 @Table(name = "tura")
 @AllArgsConstructor
 @NoArgsConstructor
+@DiscriminatorValue("TURA")
+@PrimaryKeyJoinColumn(name = "usluga_id")
 public class Tura extends Usluga {
 
     @Column(name = "broj_dana", nullable = false)

@@ -6,14 +6,19 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Entity
 @Getter
 @Setter
-@Table(name="usluga")
 @AllArgsConstructor
 @NoArgsConstructor
-@MappedSuperclass
-public class Usluga {
+@Entity
+@Table(name = "usluga", indexes = {
+        @Index(name = "idx_usluga_vlasnik", columnList = "vlasnik_id"),
+        @Index(name = "idx_usluga_okrug", columnList = "okrug"),
+        @Index(name = "idx_usluga_status", columnList = "status")
+})
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "tip_usluge", discriminatorType = DiscriminatorType.STRING)
+public abstract class Usluga {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +27,7 @@ public class Usluga {
 
     @Column(name = "naziv", nullable = false)
     private String naziv;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private StatusUsluge status;
@@ -31,18 +36,14 @@ public class Usluga {
     private String opis;
 
     @Column(name = "zahteva_potvrdu_vlasnika", nullable = false)
-    private boolean zahtevaPotvdruVlasnika = false;
-    
+    private boolean zahtevaPotvrdruVlasnika = false;
+
     @Column(name = "maks_br_osoba", nullable = false)
     private Integer maksBrOsoba;
-    
+
     @Column(name = "min_br_osoba", nullable = false)
     private Integer minBrOsoba;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tip_usluge", nullable = false)
-    private TipUsluge tipUsluge;
-    
+
     @Column(name = "broj_recenzija", nullable = false)
     private Integer brojRecenzija = 0;
 
@@ -65,7 +66,7 @@ public class Usluga {
     private BigDecimal latitude;
 
     @Column(name = "longitude", nullable = false)
-    private BigDecimal  longitude;
+    private BigDecimal longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "politika_otkazivanja", nullable = false)
@@ -105,10 +106,9 @@ public class Usluga {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "usluga_karakteristika",
-        joinColumns = @JoinColumn(name = "usluga_id"),
-        inverseJoinColumns = @JoinColumn(name = "karakteristika_id")
+            name = "usluga_karakteristika",
+            joinColumns = @JoinColumn(name = "usluga_id"),
+            inverseJoinColumns = @JoinColumn(name = "karakteristika_id")
     )
     private List<Karakteristika> karakteristike;
-
 }
