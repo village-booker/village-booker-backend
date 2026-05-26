@@ -43,6 +43,10 @@ public class Placanje {
     @Column(name = "nacin", nullable = false)
     private NacinPlacanja nacin;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tip_placanja", nullable = false)
+    private TipPlacanja tipPlacanja;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rezervacija_id", nullable = false)
     private Rezervacija rezervacija;
