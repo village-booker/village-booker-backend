@@ -38,5 +38,4 @@ out/
 
 
 .env
-src/main/resources/application.properties
 .gradle-local/
