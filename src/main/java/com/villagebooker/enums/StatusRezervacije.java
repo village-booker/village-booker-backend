@@ -1,4 +1,4 @@
-package com.villagebooker.model;
+package com.villagebooker.enums;
 
 public enum StatusRezervacije {
     CEKA_POTVRDU_VLASNIKA,
@@ -8,5 +8,6 @@ public enum StatusRezervacije {
     ISTEKLO,
     OTKAZANO_KORISNIK,
     OTKAZANO_VLASNIK,
+    OTKAZANO_NEDOVOLJNO_PRIJAVA,
     ZAVRSENO
 }

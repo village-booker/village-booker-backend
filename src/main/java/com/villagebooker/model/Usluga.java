@@ -1,5 +1,8 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.NacinPlacanja;
+import com.villagebooker.enums.PolitikaOtkazivanja;
+import com.villagebooker.enums.StatusUsluge;
 import jakarta.persistence.*;
 import lombok.*;
 

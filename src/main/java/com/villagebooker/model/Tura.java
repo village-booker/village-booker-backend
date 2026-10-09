@@ -1,5 +1,6 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.TezinaTure;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Getter
@@ -27,4 +29,7 @@ public class Tura extends Usluga {
 
     @Column(precision = 19, scale = 2, nullable = false, name= "cena_po_osobi")
     private BigDecimal cenaPoOsobi;
+
+    @OneToMany(mappedBy = "tura", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TerminTure> termini;
 }

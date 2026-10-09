@@ -1,4 +1,4 @@
-package com.villagebooker.model;
+package com.villagebooker.enums;
 
 public enum PolitikaOtkazivanja {
     BESPLATNO,

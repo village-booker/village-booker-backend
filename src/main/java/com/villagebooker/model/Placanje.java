@@ -1,5 +1,8 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.NacinPlacanja;
+import com.villagebooker.enums.StatusPlacanja;
+import com.villagebooker.enums.TipPlacanja;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

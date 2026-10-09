@@ -1,5 +1,6 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.StatusRezervacije;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -65,6 +66,10 @@ public class Rezervacija {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usluga_id")
     private Usluga usluga;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "termin_id")
+    private TerminTure termin;
 
     @OneToMany(mappedBy = "rezervacija", fetch = FetchType.LAZY)
     private List<Placanje> placanja;
