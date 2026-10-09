@@ -14,11 +14,18 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "usluga", indexes = {
-        @Index(name = "idx_usluga_vlasnik", columnList = "vlasnik_id"),
-        @Index(name = "idx_usluga_okrug", columnList = "okrug"),
-        @Index(name = "idx_usluga_status", columnList = "status")
-})
+@Table(name = "usluga",
+        indexes = {
+                @Index(name = "idx_usluga_vlasnik", columnList = "vlasnik_id"),
+                @Index(name = "idx_usluga_okrug", columnList = "okrug"),
+                @Index(name = "idx_usluga_status", columnList = "status")
+        },
+        check = {
+                @CheckConstraint(name = "chk_usluga_br_osoba", constraint = "min_br_osoba > 0 AND min_br_osoba <= maks_br_osoba"),
+                @CheckConstraint(name = "chk_usluga_kapara_procenat", constraint = "kapara_procenat BETWEEN 0 AND 100"),
+                @CheckConstraint(name = "chk_usluga_procenat_povrata", constraint = "procenat_povrata BETWEEN 0 AND 100"),
+                @CheckConstraint(name = "chk_usluga_rok_otkazivanja", constraint = "rok_besplatnog_otkazivanja >= 0")
+        })
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "tip_usluge", discriminatorType = DiscriminatorType.STRING)
 public abstract class Usluga {
@@ -39,7 +46,7 @@ public abstract class Usluga {
     private String opis;
 
     @Column(name = "zahteva_potvrdu_vlasnika", nullable = false)
-    private boolean zahtevaPotvrdruVlasnika = false;
+    private boolean zahtevaPotvrduVlasnika = false;
 
     @Column(name = "maks_br_osoba", nullable = false)
     private Integer maksBrOsoba;
@@ -62,13 +69,13 @@ public abstract class Usluga {
     @Column(name = "okrug")
     private String okrug;
 
-    @Column(name = "ocena")
+    @Column(name = "ocena", precision = 3, scale = 2)
     private BigDecimal ocena;
 
-    @Column(name = "latitude", nullable = false)
+    @Column(name = "latitude", precision = 9, scale = 6, nullable = false)
     private BigDecimal latitude;
 
-    @Column(name = "longitude", nullable = false)
+    @Column(name = "longitude", precision = 9, scale = 6, nullable = false)
     private BigDecimal longitude;
 
     @Enumerated(EnumType.STRING)
@@ -79,13 +86,13 @@ public abstract class Usluga {
     @Column(name = "nacin_placanja", nullable = false)
     private NacinPlacanja nacinPlacanja;
 
-    @Column(name = "kapara_procenat")
+    @Column(name = "kapara_procenat", precision = 5, scale = 2)
     private BigDecimal kaparaProcenat;
 
     @Column(name = "rok_besplatnog_otkazivanja")
     private Integer rokBesplatnogOtkazivanja;
 
-    @Column(name = "procenat_povrata")
+    @Column(name = "procenat_povrata", precision = 5, scale = 2)
     private BigDecimal procenatPovrata;
 
     @ManyToOne(fetch = FetchType.LAZY)

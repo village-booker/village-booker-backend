@@ -9,13 +9,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 @Entity
 @Getter
 @Setter
-@Table(name="uslugaistorija")
+@Table(name = "uslugaistorija", indexes = {
+        @Index(name = "idx_usluga_istorija_usluga", columnList = "usluga_id")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class UslugaIstorija {
@@ -39,7 +41,7 @@ public class UslugaIstorija {
 
     @CreationTimestamp
     @Column(name = "vreme_promene", nullable = false)
-    private LocalDateTime vremePromene;
+    private Instant vremePromene;
 
     @Column(name = "uzrok")
     private String uzrok;

@@ -7,12 +7,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
 @Setter
-@Table(name="recenzija")
+@Table(name = "recenzija", check = {
+        @CheckConstraint(name = "chk_recenzija_ocena", constraint = "ocena BETWEEN 1 AND 5")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class Recenzija {
@@ -21,7 +23,7 @@ public class Recenzija {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "ocena")
+    @Column(name = "ocena", nullable = false)
     private Integer ocena;
 
     @Column(name = "komentar")
@@ -32,7 +34,7 @@ public class Recenzija {
 
     @CreationTimestamp
     @Column(name = "datum", nullable = false)
-    private LocalDateTime datum;
+    private Instant datum;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rezervacija_id", nullable = false, unique = true)

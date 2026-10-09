@@ -7,12 +7,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
 @Setter
-@Table(name="uslugaslika")
+@Table(name = "uslugaslika", indexes = {
+        @Index(name = "idx_usluga_slika_usluga", columnList = "usluga_id, redosled")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class UslugaSlika {
@@ -34,5 +36,5 @@ public class UslugaSlika {
     
     @CreationTimestamp
     @Column(name = "kreirana_at", nullable = false)
-    private LocalDateTime kreiranaAt;
+    private Instant kreiranaAt;
 }

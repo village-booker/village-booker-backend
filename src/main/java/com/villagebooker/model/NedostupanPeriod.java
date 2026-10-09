@@ -6,12 +6,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Getter
 @Setter
-@Table(name="nedostupanperiod")
+@Table(name = "nedostupanperiod",
+        indexes = {
+                @Index(name = "idx_nedostupan_period_usluga", columnList = "usluga_id, datum_od")
+        },
+        check = {
+                @CheckConstraint(name = "chk_nedostupan_period_datumi", constraint = "datum_od < datum_do")
+        })
 @AllArgsConstructor
 @NoArgsConstructor
 public class NedostupanPeriod {
@@ -21,10 +27,10 @@ public class NedostupanPeriod {
     private Long id;
 
     @Column(name = "datum_od", nullable = false)
-    private LocalDateTime datum_od;
+    private LocalDate datumOd;
 
     @Column(name = "datum_do", nullable = false)
-    private LocalDateTime datum_do;
+    private LocalDate datumDo;
 
     @Column(name = "razlog")
     private String razlog;

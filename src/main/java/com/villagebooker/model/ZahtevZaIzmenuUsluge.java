@@ -10,13 +10,17 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 @Entity
 @Getter
 @Setter
-@Table(name = "zahtevzaizmenuusluge")
+@Table(name = "zahtevzaizmenuusluge", indexes = {
+        @Index(name = "idx_zahtev_usluga", columnList = "usluga_id"),
+        @Index(name = "idx_zahtev_podnosilac", columnList = "podnosilac_id"),
+        @Index(name = "idx_zahtev_status", columnList = "status")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class ZahtevZaIzmenuUsluge {
@@ -26,7 +30,7 @@ public class ZahtevZaIzmenuUsluge {
     private Long id;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name="podaci_za_izmenu", columnDefinition = "jsonb")
+    @Column(name = "podaci_za_izmenu", columnDefinition = "jsonb")
     private Map<String, Object> podaciZaIzmenu;
 
     @Enumerated(EnumType.STRING)
@@ -34,15 +38,22 @@ public class ZahtevZaIzmenuUsluge {
     private StatusZahteva status;
 
     @CreationTimestamp
-    @Column(name = "kreiran_at", nullable = false)
-    private LocalDateTime kreiran_at;
+    @Column(name = "kreiran_at", nullable = false, updatable = false)
+    private Instant kreiranAt;
+
+    @Column(name = "obradjen_at")
+    private Instant obradjenAt;
+
+    @Column(name = "razlog_odbijanja")
+    private String razlogOdbijanja;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "podnosilac_id", nullable = false)
     private Korisnik podnosilac;
 
+    // null dok admin ne obradi zahtev
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_id", nullable = false)
+    @JoinColumn(name = "admin_id")
     private Korisnik admin;
 
     @ManyToOne(fetch = FetchType.LAZY)

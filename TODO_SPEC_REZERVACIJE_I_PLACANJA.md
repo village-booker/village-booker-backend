@@ -32,7 +32,7 @@ Pri kreiranju rezervacije servis kopira sa `Usluga` u `Rezervacija`:
 |---|---|---|
 | cena (`baznaCenaNoci`... / `cenaPoOsobi`) | `ukupnaCena`, `preostaloZaPlatiti` | izracunato |
 | `politikaOtkazivanja` | `politikaOtkazivanja` | `NOT NULL` |
-| `rokBesplatnogOtkazivanja` (broj dana) | `besplatnoOtkazivanjeDo` (`LocalDateTime`) | izracunato, vidi ispod |
+| `rokBesplatnogOtkazivanja` (broj dana) | `besplatnoOtkazivanjeDo` (`Instant`) | izracunato, vidi ispod |
 | `procenatPovrata` | `procenatPovrata` | nullable |
 | `kaparaProcenat` | `kaparaProcenat` | nullable |
 | `nacinPlacanja` | `nacinPlacanja` | `NOT NULL` |
@@ -42,9 +42,23 @@ Pravila:
 - Vrednosti se popunjavaju **samo u servisu** pri kreiranju, nikad iz request DTO-a, i posle se ne menjaju.
 - Sva logika otkazivanja i refunda cita **samo polja sa rezervacije**, nikad sa `Usluga`.
 - `Usluga.rokBesplatnogOtkazivanja` = broj dana pre `rezervacijaOd` do kog je otkazivanje besplatno.
-- `besplatnoOtkazivanjeDo = rezervacijaOd.atStartOfDay().minusDays(rokBesplatnogOtkazivanja)`.
+- `besplatnoOtkazivanjeDo = rezervacijaOd.minusDays(rokBesplatnogOtkazivanja).atStartOfDay(ZoneId.of("Europe/Belgrade")).toInstant()`.
 - Kod `BEZ_POVRATA` (ili kad `rokBesplatnogOtkazivanja` nije postavljen): `besplatnoOtkazivanjeDo = null`.
 - Ako je gost rezervisao kad je rok vec prosao (npr. rok 7 dana, rezervacija 3 dana pre dolaska), `besplatnoOtkazivanjeDo` je u proslosti -> nema besplatnog otkazivanja. (Opciono kasnije: grace period npr. 24h od `vremeRezervisanja`.)
+
+Sta se **ne** cuva na rezervaciji (izvodi se):
+
+- vlasnik -> `rezervacija.usluga.vlasnik` (JPQL: `r.usluga.vlasnik.id = :id`)
+- broj noci / dana -> `Rezervacija.getBrojNoci()` = `DAYS.between(rezervacijaOd, rezervacijaDo)`
+
+## 1.2 Konvencije modela
+
+- **Vreme:** trenutak dogadjaja (`kreiranAt`, `vremeRezervisanja`, `isticeU`, `besplatnoOtkazivanjeDo`, `rokZaMin`, `vreme` placanja...) je `Instant` -> `timestamptz`. Datumi boravka/termina (`rezervacijaOd/Do`, `datumOd/Do`) su `LocalDate`. Konverzija lokalnog datuma u trenutak uvek sa `ZoneId.of("Europe/Belgrade")`.
+- **Intervali datuma** su poluotvoreni `[od, do)` svuda: `Rezervacija`, `NedostupanPeriod`, `TerminTure`. Svaka tabela ima `CHECK od < do`.
+- **Novac:** `BigDecimal`, `numeric(19,2)`. **Procenti:** `numeric(5,2)` + `CHECK 0..100`. **Koordinate:** `numeric(9,6)`. `BigDecimal` bez `precision/scale` je zabranjen (Hibernate default je `numeric(38,2)`).
+- **Imena:** camelCase u Javi, snake_case samo u `@Column(name = ...)`.
+- **Indeksi:** svaka FK kolona po kojoj se pretrazuje ima `@Index` (Postgres ih ne pravi automatski).
+- **Ograničenja u bazi:** `CHECK` preko `@Table(check = @CheckConstraint(...))`. `ddl-auto=update` ih ne dodaje na postojece tabele i ne menja tipove kolona -> posle izmene modela u razvoju obrisati semu. Sto Hibernate ne ume (`EXCLUDE`, `UNIQUE (lower(email))`, partial indeksi) ide u prvu Flyway migraciju.
 
 ## 2) Status model
 
@@ -122,11 +136,12 @@ Osnovica = zbir `iznos` svih `Placanje` sa statusom `USPESNO` za tu rezervaciju.
 
 Polja:
 
-- `tip` (`KAPARA`, `OSTATAK`, `PUNO`)
+- `tipPlacanja` (`KAPARA`, `OSTATAK`, `PUNO`)
+- `nacin` (`NacinUplate`: `ONLINE`, `NA_LICU_MESTA`) - jedna uplata nikad nije `KOMBINOVANO`; `KOMBINOVANO` postoji samo na `Usluga`/`Rezervacija` (`NacinPlacanja`)
 - `status` (`StatusPlacanja`)
-- `iznos` (`BigDecimal`)
-- `refundIznos` (`BigDecimal`)
-- `paymentIntentId` (Stripe ID)
+- `iznos` (`BigDecimal`, `CHECK iznos > 0`)
+- `refundIznos` (`BigDecimal`) - **jos nije u modelu**, dodati uz refund logiku
+- `stripePaymentId` (Stripe PaymentIntent ID)
 - `stripeRefundId` (poslednji refund ID ili drugi dogovoreni audit model)
 
 Pravila:
@@ -148,11 +163,25 @@ WHERE status IN ('CEKA_POTVRDU_VLASNIKA', 'CEKA_PLACANJE', 'ODOBRENO')
 - Aplikaciono: insert u transakciji, conflict iz DB -> HTTP `409`.
 - Dodatno: najvise jedno aktivno pending placanje po rezervaciji (partial unique index).
 - **Overlap vazi samo za smestaj.** `EXCLUDE` mora imati i `AND termin_id IS NULL`, inace bi blokirao vise grupa na istom terminu ture.
+- `EXCLUDE` zahteva `CREATE EXTENSION IF NOT EXISTS btree_gist;` i ide u Flyway migraciju.
+
+### 5.0 Rezervacija vs. NedostupanPeriod (smestaj)
+
+Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanPeriod`. `EXCLUDE` radi samo unutar jedne tabele, pa ne pokriva oba slucaja (race: gost rezervise dok vlasnik istovremeno dodaje nedostupan period).
+
+- Oba toka zakljucavaju **isti red usluge** pre provere:
+  - kreiranje rezervacije smestaja
+  - dodavanje / izmena `NedostupanPeriod`
+- `UslugaRepository.findByIdForUpdate(id)` sa `@Lock(PESSIMISTIC_WRITE)`.
+- Pod lockom: proveri preklapanje u **obe** tabele -> insert -> commit. Konflikt -> HTTP `409`.
+- Transakcija pod lockom mora biti kratka (bez Stripe poziva).
+- `EXCLUDE` na `rezervacija` ostaje kao druga linija odbrane.
+- Integracioni test: paralelno rezervacija + nedostupan period za isti datum -> prolazi tacno jedno.
 
 ### 5.1 Ture i termini (vise grupa na jednoj turi)
 
 - Gost se prijavljuje na `TerminTure`, ne bira datume. Request sadrzi `terminId` + `brOsoba`.
-- Servis popunjava: `termin`, `usluga = termin.tura`, `rezervacijaOd/Do` iz termina, `brojDana = tura.brojDana`, `ukupnaCena = cenaPoOsobi * brOsoba`.
+- Servis popunjava: `termin`, `usluga = termin.tura`, `rezervacijaOd/Do` iz termina, `ukupnaCena = cenaPoOsobi * brOsoba`.
 - Invarijanta: `termin != null` => `termin.tura.id == usluga.id`.
 - `minBrOsoba` / `maksBrOsoba` kod ture vaze za **ceo termin**, ne za jednu grupu.
 - Kapacitet: u transakciji, uz `PESSIMISTIC_WRITE` lock na termin (ili `@Version` + retry):
@@ -186,12 +215,13 @@ WHERE status IN ('CEKA_POTVRDU_VLASNIKA', 'CEKA_PLACANJE', 'ODOBRENO')
 
 - `CEKA_POTVRDU_VLASNIKA -> ISTEKLO` nakon `12h`.
 - `CEKA_PLACANJE -> ISTEKLO` nakon `15m`.
-- Scheduler (`@Scheduled`) menja samo status.
+- Pri svakom prelasku u status koji moze da istekne servis postavlja `Rezervacija.isticeU = now + timeout`; pri izlasku iz njega `isticeU = null`.
+- Scheduler bira `WHERE status IN (...) AND istice_u < now()` (indeks `idx_rezervacija_status_istice`) i menja samo status.
 - Smestaj: rezervisani termini se automatski oslobadjaju jer overlap blokira samo aktivne statuse.
 - Tura: pri isteku rezervacije scheduler umanjuje `TerminTure.brPrijavljenih` (vidi 5.1).
 - Tura: posle `TerminTure.rokZaMin`, ako je `brPrijavljenih < minBrOsoba` -> termin `OTKAZAN`, sve aktivne rezervacije `OTKAZANO_NEDOVOLJNO_PRIJAVA`, puni refund.
 - Tura: termin posle `datumDo` -> `ZAVRSEN`.
-- Konfigurabilno kroz `application.yml` (ne hardcode).
+- Konfigurabilno kroz `application.properties` (ne hardcode).
 - ShedLock: preporuka da bude ukljucen odmah zbog multi-instance sigurnosti.
 
 ## 9) Soft delete strategija
@@ -234,7 +264,7 @@ Napomena: kod `JOINED` nasledjivanja soft delete se vodi na baznoj `Usluga`.
 
 Dodati `@Version` na:
 
-- `Rezervacija`
+- `Rezervacija` (vec dodato)
 - `Usluga`
 - `Placanje`
 - `TerminTure` (vec dodato; stiti `brPrijavljenih` od overbookinga)
@@ -253,7 +283,8 @@ Minimum obavezno: `Rezervacija` (konkurentni update statusa) i `TerminTure`.
 - `TezinaTure`: `LAKO`, `SREDNJE`, `TESKO`, `EKSTREMNO`
 - `TipPlacanja`: `KAPARA`, `OSTATAK`, `PUNO`
 - `StatusPlacanja`: `NA_CEKANJU`, `USPESNO`, `NEUSPESNO`, `REFUNDIRANO`
-- `NacinPlacanja`: `NA_LICU_MESTA`, `ONLINE`, `KOMBINOVANO`
+- `NacinPlacanja`: `NA_LICU_MESTA`, `ONLINE`, `KOMBINOVANO` (na `Usluga` i `Rezervacija`)
+- `NacinUplate`: `ONLINE`, `NA_LICU_MESTA` (na `Placanje`)
 - `TipUsluge`: `SMESTAJ`, `TURA`
 
 ## 13) Predlog redosleda implementacije

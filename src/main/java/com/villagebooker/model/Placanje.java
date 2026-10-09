@@ -1,6 +1,6 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.NacinPlacanja;
+import com.villagebooker.enums.NacinUplate;
 import com.villagebooker.enums.StatusPlacanja;
 import com.villagebooker.enums.TipPlacanja;
 import jakarta.persistence.*;
@@ -11,21 +11,28 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
 @Setter
-@Table(name = "placanje")
+@Table(name = "placanje",
+        indexes = {
+                @Index(name = "idx_placanje_rezervacija", columnList = "rezervacija_id")
+        },
+        check = {
+                @CheckConstraint(name = "chk_placanje_iznos", constraint = "iznos > 0")
+        })
 @NoArgsConstructor
 @AllArgsConstructor
 public class Placanje {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "iznos", nullable = false)
+    @Column(name = "iznos", precision = 19, scale = 2, nullable = false)
     private BigDecimal iznos;
 
     @Enumerated(EnumType.STRING)
@@ -36,15 +43,15 @@ public class Placanje {
     private String stripePaymentId;
 
     @Column(name = "stripe_refund_id")
-    private String StripeRefundId;
+    private String stripeRefundId;
 
     @CreationTimestamp
-    @Column(name = "vreme", nullable = false)
-    private LocalDateTime vreme;
+    @Column(name = "vreme", nullable = false, updatable = false)
+    private Instant vreme;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "nacin", nullable = false)
-    private NacinPlacanja nacin;
+    private NacinUplate nacin;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tip_placanja", nullable = false)

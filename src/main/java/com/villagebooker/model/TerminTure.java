@@ -8,15 +8,20 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Entity
 @Getter
 @Setter
-@Table(name = "termin_ture", indexes = {
-        @Index(name = "idx_termin_tura_datum", columnList = "tura_id, datum_od")
-})
+@Table(name = "termin_ture",
+        indexes = {
+                @Index(name = "idx_termin_tura_datum", columnList = "tura_id, datum_od")
+        },
+        check = {
+                @CheckConstraint(name = "chk_termin_datumi", constraint = "datum_od < datum_do"),
+                @CheckConstraint(name = "chk_termin_br_prijavljenih", constraint = "br_prijavljenih >= 0")
+        })
 @AllArgsConstructor
 @NoArgsConstructor
 public class TerminTure {
@@ -40,7 +45,7 @@ public class TerminTure {
     private StatusTermina status = StatusTermina.OTVOREN;
 
     @Column(name = "rok_za_min", nullable = false)
-    private LocalDateTime rokZaMin;
+    private Instant rokZaMin;
 
     @Version
     @Column(name = "version")

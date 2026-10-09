@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Entity
@@ -30,7 +30,7 @@ public class Korisnik {
     @Column(name = "prezime")
     private String prezime;
 
-    @Column(name = "email", nullable = false)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
     @Column(name = "sifra", nullable = false)
@@ -44,7 +44,7 @@ public class Korisnik {
     
     @CreationTimestamp
     @Column(name = "kreiran_at", nullable = false, updatable = false)
-    private LocalDateTime kreiranAt;
+    private Instant kreiranAt;
     
     @Column(name = "bankovni_racun")
     private String bankovniRacun;
@@ -59,9 +59,6 @@ public class Korisnik {
     @OneToMany(mappedBy = "gost", fetch = FetchType.LAZY)
     private List<Rezervacija> napravljeneRezervacije;
 
-    @OneToMany(mappedBy = "vlasnik", fetch = FetchType.LAZY)
-    private List<Rezervacija> primljeneRezervacije;
-
     @OneToMany(mappedBy = "korisnik", fetch = FetchType.LAZY,
             cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OmiljenaUsluga> omiljeneUsluge;
@@ -70,5 +67,5 @@ public class Korisnik {
     private List<ZahtevZaIzmenuUsluge> podnetiZahtevi;
 
     @OneToMany(mappedBy = "admin", fetch = FetchType.LAZY)
-    private List<ZahtevZaIzmenuUsluge> obradjenizahtevi;
+    private List<ZahtevZaIzmenuUsluge> obradjeniZahtevi;
 }

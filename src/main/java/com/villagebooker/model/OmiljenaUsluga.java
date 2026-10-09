@@ -8,12 +8,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
 @Setter
-@Table(name="omiljenausluga")
+@Table(name = "omiljenausluga", indexes = {
+        @Index(name = "idx_omiljena_korisnik", columnList = "korisnik_id"),
+        @Index(name = "idx_omiljena_usluga", columnList = "usluga_id")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class OmiljenaUsluga {
@@ -33,10 +36,10 @@ public class OmiljenaUsluga {
 
     @CreationTimestamp
     @Column(name = "datum_dodavanja", nullable = false)
-    private LocalDateTime datumDodavanja;
+    private Instant datumDodavanja;
     
     @Column(name = "datum_brisanja")
-    private LocalDateTime datumBrisanja;
+    private Instant datumBrisanja;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
