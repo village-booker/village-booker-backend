@@ -1,5 +1,6 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.PolitikaOtkazivanja;
 import com.villagebooker.enums.StatusRezervacije;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -54,6 +55,19 @@ public class Rezervacija {
 
     @Column(name = "napomena")
     private String napomena;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "politika_otkazivanja", nullable = false)
+    private PolitikaOtkazivanja politikaOtkazivanja;
+
+    @Column(name = "besplatno_otkazivanje_do")
+    private LocalDateTime besplatnoOtkazivanjeDo;
+
+    @Column(name = "procenat_povrata")
+    private BigDecimal procenatPovrata;
+
+    @Column(name = "kapara_procenat")
+    private BigDecimal kaparaProcenat;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gost_id")
