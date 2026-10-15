@@ -9,7 +9,6 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
-import java.util.List;
 
 @Entity
 @Getter
@@ -52,20 +51,4 @@ public class Korisnik {
     @Enumerated(EnumType.STRING)
     @Column(name = "uloga", nullable = false)
     private Uloga uloga;
-    
-    @OneToMany(mappedBy = "vlasnik", fetch = FetchType.LAZY)
-    private List<Usluga> usluge;
-
-    @OneToMany(mappedBy = "gost", fetch = FetchType.LAZY)
-    private List<Rezervacija> napravljeneRezervacije;
-
-    @OneToMany(mappedBy = "korisnik", fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OmiljenaUsluga> omiljeneUsluge;
-
-    @OneToMany(mappedBy = "podnosilac", fetch = FetchType.LAZY)
-    private List<ZahtevZaIzmenuUsluge> podnetiZahtevi;
-
-    @OneToMany(mappedBy = "admin", fetch = FetchType.LAZY)
-    private List<ZahtevZaIzmenuUsluge> obradjeniZahtevi;
 }

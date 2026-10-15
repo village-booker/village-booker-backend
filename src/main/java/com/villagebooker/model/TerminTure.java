@@ -9,7 +9,6 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.Instant;
-import java.util.List;
 
 @Entity
 @Getter
@@ -54,7 +53,4 @@ public class TerminTure {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tura_id", nullable = false)
     private Tura tura;
-
-    @OneToMany(mappedBy = "termin", fetch = FetchType.LAZY)
-    private List<Rezervacija> rezervacije;
 }

@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 @Entity
 @Getter
@@ -110,12 +109,6 @@ public class Rezervacija {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "termin_id")
     private TerminTure termin;
-
-    @OneToMany(mappedBy = "rezervacija", fetch = FetchType.LAZY)
-    private List<Placanje> placanja;
-
-    @OneToOne(mappedBy = "rezervacija", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private Recenzija recenzija;
 
     public long getBrojNoci() {
         return ChronoUnit.DAYS.between(rezervacijaOd, rezervacijaDo);

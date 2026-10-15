@@ -103,15 +103,6 @@ public abstract class Usluga {
     private List<UslugaSlika> slike;
 
     @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UslugaIstorija> istorija;
-
-    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY)
-    private List<Rezervacija> rezervacije;
-
-    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY)
-    private List<ZahtevZaIzmenuUsluge> zahtevi;
-
-    @OneToMany(mappedBy = "usluga", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NedostupanPeriod> nedostupniPeriodi;
 
     @ManyToMany(fetch = FetchType.LAZY)

@@ -57,6 +57,7 @@ Sta se **ne** cuva na rezervaciji (izvodi se):
 - **Intervali datuma** su poluotvoreni `[od, do)` svuda: `Rezervacija`, `NedostupanPeriod`, `TerminTure`. Svaka tabela ima `CHECK od < do`.
 - **Novac:** `BigDecimal`, `numeric(19,2)`. **Procenti:** `numeric(5,2)` + `CHECK 0..100`. **Koordinate:** `numeric(9,6)`. `BigDecimal` bez `precision/scale` je zabranjen (Hibernate default je `numeric(38,2)`).
 - **Imena:** camelCase u Javi, snake_case samo u `@Column(name = ...)`.
+- **Kolekcije:** `@ManyToOne` uvek (to je FK). `@OneToMany` / inverzni `@OneToOne` samo kad roditelj upravlja zivotom dece (`cascade` + `orphanRemoval`): trenutno `Usluga.slike`, `Usluga.nedostupniPeriodi`, plus `Usluga.karakteristike` (`@ManyToMany`, vlasnik join tabele). Sve ostalo kroz upite u repository-ju, sa paginacijom.
 - **Indeksi:** svaka FK kolona po kojoj se pretrazuje ima `@Index` (Postgres ih ne pravi automatski).
 - **Ograničenja u bazi:** `CHECK` preko `@Table(check = @CheckConstraint(...))`. `ddl-auto=update` ih ne dodaje na postojece tabele i ne menja tipove kolona -> posle izmene modela u razvoju obrisati semu. Sto Hibernate ne ume (`EXCLUDE`, `UNIQUE (lower(email))`, partial indeksi) ide u prvu Flyway migraciju.
 

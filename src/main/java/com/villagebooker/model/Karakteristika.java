@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
 
 @Getter
 @Setter
@@ -23,7 +22,4 @@ public class Karakteristika {
 
     @Column(unique = true, nullable = false, name = "naziv")
     private String naziv;
-
-    @ManyToMany(mappedBy = "karakteristike", fetch = FetchType.LAZY)
-    private List<Usluga> usluge;
 }
