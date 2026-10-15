@@ -106,6 +106,28 @@ Sta se **ne** cuva na rezervaciji (izvodi se):
 - vlasnik -> `rezervacija.usluga.vlasnik` (JPQL: `r.usluga.vlasnik.id = :id`)
 - broj noci / dana -> `Rezervacija.getBrojNoci()` = `DAYS.between(rezervacijaOd, rezervacijaDo) + 1`
 
+### 1.3 Broj gostiju i cena
+
+**Smestaj** (jedna rezervacija zauzima ceo smestaj):
+
+| Polje | Znacenje |
+|---|---|
+| `minBrOsoba` (`minGuests`) | najmanje gostiju u jednoj rezervaciji (obicno 1) |
+| `maksBrOsoba` (`maxGuests`) | kapacitet, najvise gostiju u jednoj rezervaciji |
+| `bazanBrOsoba` (`baseGuests`) | koliko gostiju je ukljuceno u `baznaCenaNoci` |
+
+```
+cena za noc = baznaCenaNoci + max(0, brOsoba - bazanBrOsoba) * dodatnaCenaOsoba
+ukupnaCena  = cena za noc * broj noci
+```
+
+- Ispod `bazanBrOsoba` cena se ne spusta (vlasnik ima iste troskove). Ko zeli jeftinije za manje gostiju, postavi manji `bazanBrOsoba`.
+- Servis proverava (nije moguce kao DB `CHECK`, polja su u dve tabele):
+  - pri kreiranju / izmeni smestaja: `minBrOsoba <= bazanBrOsoba <= maksBrOsoba`
+  - pri rezervaciji: `minBrOsoba <= brOsoba <= maksBrOsoba`
+
+**Tura:** `minBrOsoba` / `maksBrOsoba` vaze za **ceo termin** (zbir svih grupa, vidi 5.1). `ukupnaCena = cenaPoOsobi * brOsoba`.
+
 ## 1.2 Konvencije modela
 
 - **Vreme:** trenutak dogadjaja (`kreiranAt`, `vremeRezervisanja`, `isticeU`, `besplatnoOtkazivanjeDo`, `rokZaMin`, `vreme` placanja...) je `Instant` -> `timestamptz`. Datumi boravka/termina (`rezervacijaOd/Do`, `datumOd/Do`) su `LocalDate`. Konverzija lokalnog datuma u trenutak uvek sa `ZoneId.of("Europe/Belgrade")`.
@@ -231,9 +253,17 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Oba toka zakljucavaju **isti red usluge** pre provere:
   - kreiranje rezervacije smestaja
   - dodavanje / izmena `NedostupanPeriod`
-- `UslugaRepository.findByIdForUpdate(id)` sa `@Lock(PESSIMISTIC_WRITE)`.
-- Pod lockom: proveri preklapanje u **obe** tabele -> insert -> commit. Konflikt -> HTTP `409`.
-- Transakcija pod lockom mora biti kratka (bez Stripe poziva).
+- `ListingRepo.findByIdForUpdate(id)` sa `@Lock(PESSIMISTIC_WRITE)` -> `SELECT ... FOR UPDATE`.
+- Pod lockom: proveri preklapanje u **obe** tabele (`BookingRepo.existsOverlapping(..., BookingStatus.ACTIVE)`, `UnavailablePeriodRepo.existsOverlapping(...)`) -> insert -> commit. Konflikt -> HTTP `409`.
+- Brisanje usluge (9.3) uzima isti lock.
+
+**Pravila za lock (vaze i za `TourDateRepo.findByIdForUpdate`):**
+
+- Samo unutar `@Transactional` metode servisa; lock se pusta na commit/rollback.
+- Transakcija pod lockom je kratka: lock -> provera -> upis -> commit. **Nikad** unutar nje: slanje mejla, HTTP pozivi, Stripe (vidi 14).
+- Svaki tok koji menja zauzetost usluge mora da uzme lock; jedan tok bez locka rusi zastitu.
+- Kad se zakljucava vise redova, uvek isti redosled: prvo `Listing`, pa `TourDate` (inace deadlock).
+- Proveriti jednom u logu (`show-sql=true`) da Hibernate za JOINED nasledjivanje generise `FOR UPDATE OF` osnovne tabele.
 - `EXCLUDE` na `rezervacija` ostaje kao druga linija odbrane.
 - Integracioni test: paralelno rezervacija + nedostupan period za isti datum -> prolazi tacno jedno.
 
@@ -244,7 +274,7 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Invarijanta: `termin != null` => `termin.tura.id == usluga.id`.
 - Datumi termina su zatvoreni: `datumDo = datumOd + tura.brojDana - 1`. Tura 12.10-13.10 (2 dana) se cuva kao `[12.10, 13.10]`; jednodnevna tura 12.10 kao `[12.10, 12.10]`.
 - `minBrOsoba` / `maksBrOsoba` kod ture vaze za **ceo termin**, ne za jednu grupu.
-- Kapacitet: u transakciji, uz `PESSIMISTIC_WRITE` lock na termin (ili `@Version` + retry):
+- Kapacitet: u transakciji, uz `PESSIMISTIC_WRITE` lock na termin (`TourDateRepo.findByIdForUpdate`):
   - `brPrijavljenih + brOsoba > tura.maksBrOsoba` -> HTTP `409`
   - inace `brPrijavljenih += brOsoba`
   - `brPrijavljenih >= minBrOsoba` -> termin `POTVRDJEN`
@@ -259,6 +289,7 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Komande (`create`, `approve`, `cancel`, `refund`) -> `@Transactional`.
 - Read operacije -> `@Transactional(readOnly = true)`.
 - Spoljne Stripe pozive ne drzati u dugoj DB transakciji.
+- Mejlovi i ostali spoljni efekti idu **posle commita**, preko dogadjaja (sekcija 14), nikad direktno iz `@Transactional` metode.
 - Webhook obrada: kratka transakcija (idempotency event + update `Placanje` + update `Rezervacija`).
 
 ## 7) Stripe integracija i security
@@ -368,36 +399,84 @@ Dodati `@Version` na:
 
 Minimum obavezno: `Rezervacija` (konkurentni update statusa) i `TerminTure`.
 
-## 12) Enum ciljna lista (za uskladjivanje)
+## 12) Enumi
 
-- `PolitikaOtkazivanja`: `BESPLATNO`, `PARCIJALNO`, `BEZ_POVRATA`
-- `StatusOmiljene`: `AKTIVNA`, `NEAKTIVNA`
-- `StatusRezervacije`: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`, `ODBIJENO`, `ISTEKLO`, `OTKAZANO_KORISNIK`, `OTKAZANO_VLASNIK`, `OTKAZANO_NEDOVOLJNO_PRIJAVA`, `ZAVRSENO`
-- `StatusTermina`: `OTVOREN`, `POTVRDJEN`, `POPUNJEN`, `OTKAZAN`, `ZAVRSEN`
-- `StatusUsluge`: `NA_CEKANJU`, `ODOBRENA`, `ODBIJENO`, `PAUZIRANA_VLASNIK`, `OBRISANA`
-- `StatusZahteva`: `NA_CEKANJU`, `ODOBREN`, `ODBIJEN`
-- `Uloga`: `KORISNIK`, `VLASNIK`, `ADMIN`
-- `TezinaTure`: `LAKO`, `SREDNJE`, `TESKO`, `EKSTREMNO`
-- `TipPlacanja`: `KAPARA`, `OSTATAK`, `PUNO`
-- `StatusPlacanja`: `NA_CEKANJU`, `USPESNO`, `NEUSPESNO`, `REFUNDIRANO`
-- `NacinPlacanja`: `NA_LICU_MESTA`, `ONLINE`, `KOMBINOVANO` (na `Usluga` i `Rezervacija`)
-- `NacinUplate`: `ONLINE`, `NA_LICU_MESTA` (na `Placanje`)
-- `TipUsluge`: `SMESTAJ`, `TURA`
+Vazeca lista enuma i vrednosti je u sekciji 0 (kolona "Kod"). Pomocni skupovi u `BookingStatus`:
 
-## 13) Predlog redosleda implementacije
+- `ACTIVE` = `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT`, `CONFIRMED` (zauzimaju datume / mesta)
+- `EXPIRABLE` = `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT` (scheduler -> `EXPIRED`)
+- `FINISHED` = svi zavrsni statusi
 
-1. Enum uskladjivanje i vidljivost (`public`), bez menjanja business logike.
-2. Money refactor (`BigDecimal`) + migracije kolona.
-3. Dodavanje novih entiteta: `Placanje`, `Recenzija`, `ZahtevZaIzmenuUsluge`, `NedostupanPeriod`.
-4. Relacije i ogranicenja (FK, unique, check, exclude).
-5. `@Version` i transakcione granice u servisima.
-6. State machine pravila u `RezervacijaService`.
-7. Stripe webhook + idempotency + signature verifikacija.
-8. Scheduler timeout logika + konfiguracija.
-9. Brisanje usluge preko statusa + otkazivanje od strane vlasnika (sekcija 9).
-10. DTO + MapStruct sloj.
-11. Testovi:
-- unit testovi state machine-a
-- integracioni testovi overlap/concurrency
-- webhook idempotency testovi
+## 13) Redosled implementacije
+
+Zavrseno:
+
+- [x] model: entiteti, enumi, ogranicenja, indeksi, `@Version`, engleski nazivi
+- [x] repozitorijumi (sekcija 15)
+
+Sledece:
+
+1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`). Dodati MapStruct u `build.gradle` uz prvi DTO.
+2. Usluge: vlasnik pravi smestaj / turu (slike, karakteristike, termini ture), admin odobrava, zahtevi za izmenu.
+3. Pretraga i prikaz za goste (`ListingRepo` + `Specification`).
+4. Rezervacije: kreiranje (lock + preklapanje / kapacitet), odobravanje, otkazivanje, refund pravila (sekcije 1.1, 3, 5, 9).
+5. Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8).
+6. Mejlovi preko dogadjaja posle commita (sekcija 14).
+7. Recenzije (preracun `rating` / `reviewCount`), omiljene, nedostupni periodi.
+8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.
+
+Testovi uz svaki korak:
+
+- unit testovi state machine-a i racunanja cene / refunda
+- integracioni testovi overlap / concurrency (dve paralelne rezervacije, rezervacija + nedostupan period)
 - scheduler expiry testovi
+
+## 14) Notifikacije (email)
+
+Mejl se salje **posle commita**, nikad unutar `@Transactional` metode:
+
+- unutar transakcije bi drzao lock (SMTP traje sekundama, svi ostali gosti te usluge cekaju)
+- mejl bi otisao i kad transakcija posle padne (rollback) -> gost dobije potvrdu za rezervaciju koja ne postoji
+- pad mail servera bi rollback-ovao ispravnu rezervaciju
+
+Obrazac:
+
+1. Servis u transakciji samo objavi dogadjaj: `events.publishEvent(new BookingCreatedEvent(booking.getId()))`. U dogadjaj ide samo ID, ne entitet.
+2. Listener: `@Async` + `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)`; ucita sta mu treba i salje mejl.
+3. `@EnableAsync` na aplikaciji.
+4. Rollback -> listener se ne pokrece. Greska pri slanju -> samo log, rezervacija ostaje.
+
+| Dogadjaj | Prima |
+|---|---|
+| `BookingCreated` | gost (zahtev poslat / potvrdjeno), domacin (nova rezervacija / ceka potvrdu) |
+| `BookingApproved`, `BookingRejected` | gost |
+| `BookingCancelled` | druga strana (gost ili domacin) |
+| `BookingExpired` | gost |
+| `TourDateConfirmed` (skupljen minimum) | svi gosti termina |
+| `TourDateCancelled` (minimum nije skupljen / vlasnik otkazao) | svi gosti termina |
+| `ListingApproved`, `ListingRejected` | vlasnik |
+
+Ogranicenje: ako aplikacija padne izmedju commita i slanja, mejl se gubi (prihvatljivo za MVP). Kasnije: **outbox** tabela `email_outbox` upisana u istoj transakciji + scheduler koji salje i ponavlja.
+
+## 15) Repozitorijumi
+
+Paket `com.villagebooker.repo`, naziv `XxxRepo`. Metode se dodaju kad ih servis zatrazi, ne unapred.
+
+| Repo | Za sta |
+|---|---|
+| `UserRepo` | login / registracija po email-u (`IgnoreCase`) |
+| `ListingRepo` | `findByIdForUpdate` (lock, 5.0), javna lista po statusu, "moje usluge" bez `DELETED`, `JpaSpecificationExecutor` za pretragu sa filterima |
+| `AccommodationRepo`, `TourRepo` | CRUD po podtipu |
+| `TourDateRepo` | `findByIdForUpdate` (lock, 5.1), termini ture (svi / samo `OPEN`+`CONFIRMED` za goste), scheduler: prosao `minGuestsDeadline`, zavrseni termini |
+| `BookingRepo` | rezervacije gosta / vlasnika (sa `@EntityGraph`), `existsOverlapping`, scheduler: istekle (`EXPIRABLE`) i zavrsene (`CONFIRMED` + `endDate < danas`), aktivne po usluzi / terminu |
+| `UnavailablePeriodRepo` | periodi usluge, `existsOverlapping` |
+| `PaymentRepo` | placanja rezervacije, `findByStripePaymentId` (buducnost) |
+| `ReviewRepo` | po rezervaciji, recenzije usluge, `averageRatingForListing` + `countByBookingListingId` za preracun `rating` / `reviewCount` |
+| `FavoriteRepo` | lista korisnika (sa `listing`), `exists...`, `delete...` (idempotentno, unutar `@Transactional`) |
+| `ListingImageRepo`, `ListingHistoryRepo`, `ListingChangeRequestRepo`, `FeatureRepo` | slike po redosledu, istorija, admin red zahteva, katalog karakteristika |
+
+Pravila:
+
+- Liste koje se mapiraju u DTO sa podacima iz veze (npr. naziv usluge uz rezervaciju) koriste `@EntityGraph`, inace N+1.
+- Liste koje rastu (rezervacije, recenzije, omiljene, istorija) uvek sa `Pageable`.
+- `findByIdForUpdate` i `delete...` metode se pozivaju samo iz `@Transactional` servisa.
