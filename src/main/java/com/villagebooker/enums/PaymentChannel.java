@@ -1,6 +1,6 @@
 package com.villagebooker.enums;
 
-public enum NacinUplate {
+public enum PaymentChannel {
     ONLINE,
-    NA_LICU_MESTA
+    ON_SITE
 }

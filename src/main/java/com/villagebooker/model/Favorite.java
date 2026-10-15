@@ -12,16 +12,16 @@ import java.time.Instant;
 @Entity
 @Getter
 @Setter
-@Table(name = "omiljenausluga",
+@Table(name = "favorite",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_omiljena_korisnik_usluga", columnNames = {"korisnik_id", "usluga_id"})
+                @UniqueConstraint(name = "uk_favorite_user_listing", columnNames = {"user_id", "listing_id"})
         },
         indexes = {
-                @Index(name = "idx_omiljena_usluga", columnList = "usluga_id")
+                @Index(name = "idx_favorite_listing", columnList = "listing_id")
         })
 @AllArgsConstructor
 @NoArgsConstructor
-public class OmiljenaUsluga {
+public class Favorite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,14 +29,14 @@ public class OmiljenaUsluga {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "korisnik_id", nullable = false)
-    private Korisnik korisnik;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id", nullable = false)
-    private Usluga usluga;
+    @JoinColumn(name = "listing_id", nullable = false)
+    private Listing listing;
 
     @CreationTimestamp
-    @Column(name = "datum_dodavanja", nullable = false, updatable = false)
-    private Instant datumDodavanja;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 }

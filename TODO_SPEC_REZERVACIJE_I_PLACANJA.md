@@ -2,6 +2,61 @@
 
 Ovaj fajl je referenca za implementaciju korak-po-korak. Fokus je produkcioni kvalitet, jasne state tranzicije, sigurnost i konkurentnost.
 
+## 0) Recnik: kod je na engleskom
+
+Tekst ispod koristi srpske nazive; u kodu i bazi vaze engleski. Tabele su snake_case u jednini.
+
+| Spec (srpski) | Klasa | Tabela |
+|---|---|---|
+| `Korisnik` | `User` | `app_user` (`user` je rezervisana rec u Postgresu) |
+| `Usluga` | `Listing` | `listing` |
+| `Smestaj` | `Accommodation` | `accommodation` |
+| `Tura` | `Tour` | `tour` |
+| `TerminTure` | `TourDate` | `tour_date` |
+| `Rezervacija` | `Booking` | `booking` |
+| `Placanje` | `Payment` | `payment` |
+| `Recenzija` | `Review` | `review` |
+| `NedostupanPeriod` | `UnavailablePeriod` | `unavailable_period` |
+| `OmiljenaUsluga` | `Favorite` | `favorite` |
+| `UslugaSlika` | `ListingImage` | `listing_image` |
+| `UslugaIstorija` | `ListingHistory` | `listing_history` |
+| `ZahtevZaIzmenuUsluge` | `ListingChangeRequest` | `listing_change_request` |
+| `Karakteristika` | `Feature` | `feature` (veza: `listing_feature`) |
+
+Vazna polja:
+
+| Spec | Kod |
+|---|---|
+| `vlasnik` / `gost` | `owner` / `guest` |
+| `rezervacijaOd` / `rezervacijaDo`, `datumOd` / `datumDo` | `startDate` / `endDate` |
+| `brOsoba`, `minBrOsoba`, `maksBrOsoba` | `guestCount`, `minGuests`, `maxGuests` |
+| `ukupnaCena`, `preostaloZaPlatiti` | `totalPrice`, `amountDue` |
+| `isticeU` | `expiresAt` |
+| `politikaOtkazivanja`, `rokBesplatnogOtkazivanja`, `besplatnoOtkazivanjeDo` | `cancellationPolicy`, `freeCancellationDays`, `freeCancellationUntil` |
+| `procenatPovrata`, `kaparaProcenat` | `refundPercentage`, `depositPercentage` |
+| `nacinPlacanja` (Usluga/Rezervacija), `nacin` (Placanje) | `paymentMethod`, `channel` |
+| `otkazanoAt`, `razlogOtkazivanja` | `cancelledAt`, `cancellationReason` |
+| `termin`, `brPrijavljenih`, `rokZaMin` | `tourDate`, `bookedCount`, `minGuestsDeadline` |
+| `zahtevaPotvrduVlasnika` | `requiresOwnerApproval` |
+| `getBrojNoci()` | `getDayCount()` |
+
+Enumi:
+
+| Spec | Kod |
+|---|---|
+| `StatusRezervacije`: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`, `ODBIJENO`, `ISTEKLO`, `OTKAZANO_KORISNIK`, `OTKAZANO_VLASNIK`, `OTKAZANO_NEDOVOLJNO_PRIJAVA`, `ZAVRSENO` | `BookingStatus`: `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT`, `CONFIRMED`, `REJECTED`, `EXPIRED`, `CANCELLED_BY_GUEST`, `CANCELLED_BY_OWNER`, `CANCELLED_MIN_NOT_REACHED`, `COMPLETED` |
+| `StatusTermina`: `OTVOREN`, `POTVRDJEN`, `POPUNJEN`, `OTKAZAN`, `ZAVRSEN` | `TourDateStatus`: `OPEN`, `CONFIRMED`, `FULL`, `CANCELLED`, `COMPLETED` |
+| `StatusUsluge`: `NA_CEKANJU`, `ODOBRENA`, `ODBIJENO`, `PAUZIRANA_VLASNIK`, `OBRISANA` | `ListingStatus`: `PENDING`, `APPROVED`, `REJECTED`, `PAUSED_BY_OWNER`, `DELETED` |
+| `StatusPlacanja`: `NA_CEKANJU`, `USPESNO`, `NEUSPESNO`, `REFUNDIRANO` | `PaymentStatus`: `PENDING`, `SUCCEEDED`, `FAILED`, `REFUNDED` |
+| `StatusZahteva`: `NA_CEKANJU`, `ODOBREN`, `ODBIJEN` | `ChangeRequestStatus`: `PENDING`, `APPROVED`, `REJECTED` |
+| `PolitikaOtkazivanja`: `BESPLATNO`, `PARCIJALNO`, `BEZ_POVRATA` | `CancellationPolicy`: `FREE`, `PARTIAL`, `NON_REFUNDABLE` |
+| `NacinPlacanja`: `NA_LICU_MESTA`, `ONLINE`, `KOMBINOVANO` | `PaymentMethod`: `ON_SITE`, `ONLINE`, `COMBINED` |
+| `NacinUplate`: `ONLINE`, `NA_LICU_MESTA` | `PaymentChannel`: `ONLINE`, `ON_SITE` |
+| `TipPlacanja`: `KAPARA`, `OSTATAK`, `PUNO` | `PaymentType`: `DEPOSIT`, `BALANCE`, `FULL` |
+| `TezinaTure`: `LAKO`, `SREDNJE`, `TESKO`, `EKSTREMNO` | `TourDifficulty`: `EASY`, `MODERATE`, `HARD`, `EXTREME` |
+| `TipUsluge`: `SMESTAJ`, `TURA` | `ListingType`: `ACCOMMODATION`, `TOUR` |
+| `Uloga`: `KORISNIK`, `VLASNIK`, `ADMIN` | `Role`: `USER`, `OWNER`, `ADMIN` |
+
 ## 1) Zakljucane poslovne odluke
 
 - Kapara je opciona i definise se na `Usluga`.

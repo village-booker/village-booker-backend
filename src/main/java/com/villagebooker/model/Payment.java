@@ -1,8 +1,8 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.NacinUplate;
-import com.villagebooker.enums.StatusPlacanja;
-import com.villagebooker.enums.TipPlacanja;
+import com.villagebooker.enums.PaymentChannel;
+import com.villagebooker.enums.PaymentStatus;
+import com.villagebooker.enums.PaymentType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,28 +16,28 @@ import java.time.Instant;
 @Entity
 @Getter
 @Setter
-@Table(name = "placanje",
+@Table(name = "payment",
         indexes = {
-                @Index(name = "idx_placanje_rezervacija", columnList = "rezervacija_id")
+                @Index(name = "idx_payment_booking", columnList = "booking_id")
         },
         check = {
-                @CheckConstraint(name = "chk_placanje_iznos", constraint = "iznos > 0")
+                @CheckConstraint(name = "chk_payment_amount", constraint = "amount > 0")
         })
 @NoArgsConstructor
 @AllArgsConstructor
-public class Placanje {
+public class Payment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "iznos", precision = 19, scale = 2, nullable = false)
-    private BigDecimal iznos;
+    @Column(name = "amount", precision = 19, scale = 2, nullable = false)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private StatusPlacanja status;
+    private PaymentStatus status;
 
     @Column(name = "stripe_payment_id", unique = true)
     private String stripePaymentId;
@@ -46,18 +46,18 @@ public class Placanje {
     private String stripeRefundId;
 
     @CreationTimestamp
-    @Column(name = "vreme", nullable = false, updatable = false)
-    private Instant vreme;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "nacin", nullable = false)
-    private NacinUplate nacin;
+    @Column(name = "channel", nullable = false)
+    private PaymentChannel channel;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tip_placanja", nullable = false)
-    private TipPlacanja tipPlacanja;
+    @Column(name = "type", nullable = false)
+    private PaymentType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rezervacija_id", nullable = false)
-    private Rezervacija rezervacija;
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 }

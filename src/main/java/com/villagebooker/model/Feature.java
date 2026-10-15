@@ -6,20 +6,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name="karakteristika")
-public class Karakteristika {
+@Table(name = "feature")
+public class Feature {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name= "id")
+    @Column(name = "id")
     private Long id;
 
-    @Column(unique = true, nullable = false, name = "naziv")
-    private String naziv;
+    @Column(name = "name", nullable = false, unique = true)
+    private String name;
 }

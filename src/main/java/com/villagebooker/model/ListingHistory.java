@@ -15,12 +15,12 @@ import java.util.Map;
 @Entity
 @Getter
 @Setter
-@Table(name = "uslugaistorija", indexes = {
-        @Index(name = "idx_usluga_istorija_usluga", columnList = "usluga_id")
+@Table(name = "listing_history", indexes = {
+        @Index(name = "idx_listing_history_listing", columnList = "listing_id")
 })
 @AllArgsConstructor
 @NoArgsConstructor
-public class UslugaIstorija {
+public class ListingHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,21 +28,21 @@ public class UslugaIstorija {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id", nullable = false)
-    private Usluga usluga;
+    @JoinColumn(name = "listing_id", nullable = false)
+    private Listing listing;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name="staro_stanje", columnDefinition = "jsonb")
-    private Map<String, Object> staroStanje;
+    @Column(name = "old_state", columnDefinition = "jsonb")
+    private Map<String, Object> oldState;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name="novo_stanje", columnDefinition = "jsonb")
-    private Map<String, Object> novoStanje;
+    @Column(name = "new_state", columnDefinition = "jsonb")
+    private Map<String, Object> newState;
 
     @CreationTimestamp
-    @Column(name = "vreme_promene", nullable = false, updatable = false)
-    private Instant vremePromene;
+    @Column(name = "changed_at", nullable = false, updatable = false)
+    private Instant changedAt;
 
-    @Column(name = "uzrok")
-    private String uzrok;
+    @Column(name = "reason")
+    private String reason;
 }

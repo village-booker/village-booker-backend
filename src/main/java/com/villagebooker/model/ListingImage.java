@@ -12,12 +12,12 @@ import java.time.Instant;
 @Entity
 @Getter
 @Setter
-@Table(name = "uslugaslika", indexes = {
-        @Index(name = "idx_usluga_slika_usluga", columnList = "usluga_id, redosled")
+@Table(name = "listing_image", indexes = {
+        @Index(name = "idx_listing_image_listing", columnList = "listing_id, sort_order")
 })
 @AllArgsConstructor
 @NoArgsConstructor
-public class UslugaSlika {
+public class ListingImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,16 +25,16 @@ public class UslugaSlika {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usluga_id", nullable = false)
-    private Usluga usluga;
+    @JoinColumn(name = "listing_id", nullable = false)
+    private Listing listing;
 
     @Column(name = "url", nullable = false)
     private String url;
 
-    @Column(name = "redosled", nullable = false)
-    private Integer redosled;
-    
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
+
     @CreationTimestamp
-    @Column(name = "kreirana_at", nullable = false, updatable = false)
-    private Instant kreiranaAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 }
