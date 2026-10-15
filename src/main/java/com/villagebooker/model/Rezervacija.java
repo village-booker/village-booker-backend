@@ -13,6 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -83,6 +84,12 @@ public class Rezervacija {
 
     @Column(name = "kapara_procenat", precision = 5, scale = 2)
     private BigDecimal kaparaProcenat;
+
+    @Column(name = "otkazano_at")
+    private LocalDateTime otkazanoAt;
+
+    @Column(name = "razlog_otkazivanja")
+    private String razlogOtkazivanja;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "nacin_placanja", nullable = false)

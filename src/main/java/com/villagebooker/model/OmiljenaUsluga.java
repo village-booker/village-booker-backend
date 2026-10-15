@@ -1,6 +1,5 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.StatusOmiljene;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -40,8 +39,4 @@ public class OmiljenaUsluga {
     
     @Column(name = "datum_brisanja")
     private Instant datumBrisanja;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private StatusOmiljene status;
 }

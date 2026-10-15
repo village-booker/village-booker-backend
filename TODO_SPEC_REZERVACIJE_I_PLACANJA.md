@@ -224,33 +224,68 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Konfigurabilno kroz `application.properties` (ne hardcode).
 - ShedLock: preporuka da bude ukljucen odmah zbog multi-instance sigurnosti.
 
-## 9) Soft delete strategija
+## 9) Brisanje i otkazivanje od strane vlasnika
 
-Soft delete:
+### 9.1 Strategija brisanja
 
-- `Usluga`
-- `Smestaj`
-- `Tura`
-- `Karakteristika`
-- `UslugaSlika`
-- `OmiljenaUsluga`
+Soft delete postoji **samo za `Usluga`**, preko statusa: `status = OBRISANA`. Nema `deleted_at`, `@SQLDelete` ni `@Filter`.
 
-Bez soft delete:
+- Na `Usluga` pokazuju rezervacije, placanja i recenzije, pa red mora ostati.
+- `Smestaj` / `Tura` su isti red kao `Usluga` (JOINED, isti id), status na `Usluga` pokriva i njih.
+- Upiti eksplicitno filtriraju status:
+  - javna pretraga: `status = ODOBRENA` (obrisane su automatski iskljucene)
+  - "moje usluge" kod vlasnika: `status <> OBRISANA`
+  - rezervacije / placanja / recenzije: bez filtera, istorija ostaje citljiva
+- `OBRISANA` je konacan status: nema prelaza iz njega, nove rezervacije se odbijaju.
 
-- `Rezervacija`
-- `Placanje`
-- `Recenzija`
-- `UslugaIstorija`
+Hard delete (red se stvarno brise):
 
-Implementacija:
+| Entitet | Napomena |
+|---|---|
+| `UslugaSlika` | brise se i fajl iz storage-a |
+| `Karakteristika` | samo admin; ako je u upotrebi -> `409` ili brisanje veza u `usluga_karakteristika` |
+| `OmiljenaUsluga` | red postoji ili ne postoji, `UNIQUE (korisnik_id, usluga_id)` (model jos ima `status`/`datumBrisanja` - za uklanjanje) |
+| `NedostupanPeriod` | |
+| `TerminTure` | samo bez aktivnih rezervacija; inace se otkazuje (9.2) |
 
-- `deleted_at`
-- opciono `deleted_by` (`Long` FK ka `Korisnik`)
-- `@SQLDelete`
-- Hibernate `@Filter`
-- unique indeksi kao partial: `WHERE deleted_at IS NULL`
+Nikad se ne brisu: `Rezervacija`, `Placanje`, `Recenzija`, `UslugaIstorija`.
 
-Napomena: kod `JOINED` nasledjivanja soft delete se vodi na baznoj `Usluga`.
+### 9.2 Vlasnik otkazuje jednu rezervaciju (ili termin ture)
+
+- Dozvoljeno iz aktivnih statusa: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`.
+- Rezervacija -> `OTKAZANO_VLASNIK`, `isticeU = null`.
+- Tura: `brPrijavljenih -= brOsoba` (vidi 5.1).
+- Otkazivanje termina ture = otkazivanje svih njegovih aktivnih rezervacija + termin `OTKAZAN`.
+- Refund: **100% uplacenog**, bez obzira na politiku (tabela u sekciji 3).
+- Stripe refund i obavestenje gosta idu **posle commita**, van DB transakcije.
+
+### 9.3 Vlasnik brise uslugu
+
+Dva koraka, da vlasnik ne bi slucajno otkazao tudje rezervacije:
+
+1. `DELETE /usluge/{id}`
+   - nema aktivnih rezervacija (`status IN (CEKA_POTVRDU_VLASNIKA, CEKA_PLACANJE, ODOBRENO)`) -> `status = OBRISANA`, `204`
+   - ima ih -> nista se ne menja, `409` + lista aktivnih rezervacija (frontend: "Brisanjem cete otkazati N rezervacija, gostima se vraca ceo iznos.")
+2. `DELETE /usluge/{id}?otkaziRezervacije=true` (posle potvrde), jedna transakcija:
+   - `findByIdForUpdate(id)` (lock, da u medjuvremenu ne nastane nova rezervacija)
+   - sve aktivne rezervacije -> `OTKAZANO_VLASNIK` (9.2)
+   - tura: svi buduci termini -> `OTKAZAN`
+   - `usluga.status = OBRISANA`
+   - posle commita: refundovi + obavestenja gostima
+
+Alternativa za vlasnika koji ne mora odmah da obrise: `PAUZIRANA_VLASNIK` (nove rezervacije se ne primaju, postojece se odrzavaju), pa brisanje kad prodju.
+
+### 9.4 Penali za vlasnika (v1: van sistema)
+
+Odluka za v1: penali se **ne modeluju i ne obracunavaju automatski**. Admin ih resava rucno, van aplikacije.
+
+Sistem samo cuva podatke na osnovu kojih admin odlucuje:
+
+- broj rezervacija u statusu `OTKAZANO_VLASNIK` po vlasniku (izvodi se upitom, nista novo u modelu)
+- (opciono) `Rezervacija.otkazanoAt` (`Instant`) i `razlogOtkazivanja` (`String`) - da se vidi koliko pre dolaska je otkazano i zasto
+- admin pregled: lista vlasnika sa brojem otkazivanja u poslednjih N meseci
+
+Kasnije (v2), ako se uvede automatika: pravila penala na nivou platforme (npr. otkazivanje < 7 dana pre dolaska -> X% vrednosti rezervacije), entitet `Penal` (vlasnik, rezervacija, iznos, status) i naplata preko Stripe Connect. Pre toga mora biti resen tok novca platforma <-> vlasnik.
 
 ## 10) DTO sloj i API granice
 
@@ -297,7 +332,7 @@ Minimum obavezno: `Rezervacija` (konkurentni update statusa) i `TerminTure`.
 6. State machine pravila u `RezervacijaService`.
 7. Stripe webhook + idempotency + signature verifikacija.
 8. Scheduler timeout logika + konfiguracija.
-9. Soft delete i filteri.
+9. Brisanje usluge preko statusa + otkazivanje od strane vlasnika (sekcija 9).
 10. DTO + MapStruct sloj.
 11. Testovi:
 - unit testovi state machine-a
