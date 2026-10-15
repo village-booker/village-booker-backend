@@ -35,6 +35,6 @@ public class UslugaSlika {
     private Integer redosled;
     
     @CreationTimestamp
-    @Column(name = "kreirana_at", nullable = false)
+    @Column(name = "kreirana_at", nullable = false, updatable = false)
     private Instant kreiranaAt;
 }

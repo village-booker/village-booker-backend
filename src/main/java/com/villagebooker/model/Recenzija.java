@@ -33,7 +33,7 @@ public class Recenzija {
     private String odgovor;
 
     @CreationTimestamp
-    @Column(name = "datum", nullable = false)
+    @Column(name = "datum", nullable = false, updatable = false)
     private Instant datum;
 
     @OneToOne(fetch = FetchType.LAZY)

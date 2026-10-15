@@ -49,12 +49,15 @@ Pravila:
 Sta se **ne** cuva na rezervaciji (izvodi se):
 
 - vlasnik -> `rezervacija.usluga.vlasnik` (JPQL: `r.usluga.vlasnik.id = :id`)
-- broj noci / dana -> `Rezervacija.getBrojNoci()` = `DAYS.between(rezervacijaOd, rezervacijaDo)`
+- broj noci / dana -> `Rezervacija.getBrojNoci()` = `DAYS.between(rezervacijaOd, rezervacijaDo) + 1`
 
 ## 1.2 Konvencije modela
 
 - **Vreme:** trenutak dogadjaja (`kreiranAt`, `vremeRezervisanja`, `isticeU`, `besplatnoOtkazivanjeDo`, `rokZaMin`, `vreme` placanja...) je `Instant` -> `timestamptz`. Datumi boravka/termina (`rezervacijaOd/Do`, `datumOd/Do`) su `LocalDate`. Konverzija lokalnog datuma u trenutak uvek sa `ZoneId.of("Europe/Belgrade")`.
-- **Intervali datuma** su poluotvoreni `[od, do)` svuda: `Rezervacija`, `NedostupanPeriod`, `TerminTure`. Svaka tabela ima `CHECK od < do`.
+- **Intervali datuma** su zatvoreni `[od, do]` svuda: `Rezervacija`, `NedostupanPeriod`, `TerminTure`. Svaki datum u intervalu je jedan zauzet dan. Svaka tabela ima `CHECK od <= do`.
+  - Smestaj: datum = **noc koja pocinje tog dana**. `rezervacijaDo` je poslednja noc; dan odlaska = `rezervacijaDo + 1` (samo za prikaz, ne cuva se). Dolazak 12.10, odlazak 14.10 -> `[12.10, 13.10]`.
+  - Tura: datum = dan ture. Tura 12.10-13.10 -> `[12.10, 13.10]`.
+  - Preklapanje: `a.od <= b.do AND b.od <= a.do`. Gost koji odlazi 14.10 i gost koji dolazi 14.10 se ne preklapaju (`[12.10, 13.10]` i `[14.10, 15.10]`).
 - **Novac:** `BigDecimal`, `numeric(19,2)`. **Procenti:** `numeric(5,2)` + `CHECK 0..100`. **Koordinate:** `numeric(9,6)`. `BigDecimal` bez `precision/scale` je zabranjen (Hibernate default je `numeric(38,2)`).
 - **Imena:** camelCase u Javi, snake_case samo u `@Column(name = ...)`.
 - **Kolekcije:** `@ManyToOne` uvek (to je FK). `@OneToMany` / inverzni `@OneToOne` samo kad roditelj upravlja zivotom dece (`cascade` + `orphanRemoval`): trenutno `Usluga.slike`, `Usluga.nedostupniPeriodi`, plus `Usluga.karakteristike` (`@ManyToMany`, vlasnik join tabele). Sve ostalo kroz upite u repository-ju, sa paginacijom.
@@ -153,9 +156,9 @@ Pravila:
 
 ## 5) Concurrency i overlap zastita
 
-- Datumski interval je poluotvoren: `[rezervacija_od, rezervacija_do)`.
-- DB `CHECK`: `rezervacija_od < rezervacija_do`.
-- PostgreSQL `EXCLUDE` constraint po `usluga_id` + overlap, samo za aktivne statuse:
+- Datumski interval je zatvoren: `[rezervacija_od, rezervacija_do]` (vidi 1.2).
+- DB `CHECK`: `rezervacija_od <= rezervacija_do`.
+- PostgreSQL `EXCLUDE` constraint po `usluga_id` + overlap `daterange(rezervacija_od, rezervacija_do, '[]')`, samo za aktivne statuse:
 
 ```
 WHERE status IN ('CEKA_POTVRDU_VLASNIKA', 'CEKA_PLACANJE', 'ODOBRENO')
@@ -184,6 +187,7 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Gost se prijavljuje na `TerminTure`, ne bira datume. Request sadrzi `terminId` + `brOsoba`.
 - Servis popunjava: `termin`, `usluga = termin.tura`, `rezervacijaOd/Do` iz termina, `ukupnaCena = cenaPoOsobi * brOsoba`.
 - Invarijanta: `termin != null` => `termin.tura.id == usluga.id`.
+- Datumi termina su zatvoreni: `datumDo = datumOd + tura.brojDana - 1`. Tura 12.10-13.10 (2 dana) se cuva kao `[12.10, 13.10]`; jednodnevna tura 12.10 kao `[12.10, 12.10]`.
 - `minBrOsoba` / `maksBrOsoba` kod ture vaze za **ceo termin**, ne za jednu grupu.
 - Kapacitet: u transakciji, uz `PESSIMISTIC_WRITE` lock na termin (ili `@Version` + retry):
   - `brPrijavljenih + brOsoba > tura.maksBrOsoba` -> HTTP `409`
@@ -203,6 +207,8 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Webhook obrada: kratka transakcija (idempotency event + update `Placanje` + update `Rezervacija`).
 
 ## 7) Stripe integracija i security
+
+> **Za sada nema Stripe-a** - ova sekcija je plan za buducnost. Kolone `stripe_payment_id` / `stripe_refund_id` postoje u modelu i ostaju `null` dok se integracija ne uvede.
 
 - Izvor istine za konacan status je webhook (ne redirect).
 - Mapiranje:
@@ -245,7 +251,7 @@ Hard delete (red se stvarno brise):
 |---|---|
 | `UslugaSlika` | brise se i fajl iz storage-a |
 | `Karakteristika` | samo admin; ako je u upotrebi -> `409` ili brisanje veza u `usluga_karakteristika` |
-| `OmiljenaUsluga` | red postoji ili ne postoji, `UNIQUE (korisnik_id, usluga_id)` (model jos ima `status`/`datumBrisanja` - za uklanjanje) |
+| `OmiljenaUsluga` | red postoji ili ne postoji, `UNIQUE (korisnik_id, usluga_id)`; dodavanje idempotentno |
 | `NedostupanPeriod` | |
 | `TerminTure` | samo bez aktivnih rezervacija; inace se otkazuje (9.2) |
 
@@ -301,7 +307,7 @@ Kasnije (v2), ako se uvede automatika: pravila penala na nivou platforme (npr. o
 Dodati `@Version` na:
 
 - `Rezervacija` (vec dodato)
-- `Usluga`
+- `Usluga` (vec dodato; stiti `ocena` / `brojRecenzija` pri istovremenim recenzijama)
 - `Placanje`
 - `TerminTure` (vec dodato; stiti `brPrijavljenih` od overbookinga)
 

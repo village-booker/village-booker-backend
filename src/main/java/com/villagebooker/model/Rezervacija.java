@@ -13,7 +13,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 @Entity
@@ -27,8 +26,10 @@ import java.time.temporal.ChronoUnit;
                 @Index(name = "idx_rezervacija_status_istice", columnList = "status, istice_u")
         },
         check = {
-                @CheckConstraint(name = "chk_rezervacija_datumi", constraint = "rezervacija_od < rezervacija_do"),
+                @CheckConstraint(name = "chk_rezervacija_datumi", constraint = "rezervacija_od <= rezervacija_do"),
                 @CheckConstraint(name = "chk_rezervacija_br_osoba", constraint = "br_osoba > 0"),
+                @CheckConstraint(name = "chk_rezervacija_ukupna_cena", constraint = "ukupna_cena >= 0"),
+                @CheckConstraint(name = "chk_rezervacija_preostalo", constraint = "preostalo_za_platiti BETWEEN 0 AND ukupna_cena"),
                 @CheckConstraint(name = "chk_rezervacija_procenat_povrata", constraint = "procenat_povrata BETWEEN 0 AND 100"),
                 @CheckConstraint(name = "chk_rezervacija_kapara_procenat", constraint = "kapara_procenat BETWEEN 0 AND 100")
         })
@@ -51,6 +52,7 @@ public class Rezervacija {
     @Column(name = "preostalo_za_platiti", precision = 19, scale = 2, nullable = false)
     private BigDecimal preostaloZaPlatiti;
 
+    // zatvoren interval [rezervacijaOd, rezervacijaDo]: smestaj = zauzete noci (odlazak = rezervacijaDo + 1), tura = dani ture
     @Column(name = "rezervacija_od", nullable = false)
     private LocalDate rezervacijaOd;
 
@@ -85,7 +87,7 @@ public class Rezervacija {
     private BigDecimal kaparaProcenat;
 
     @Column(name = "otkazano_at")
-    private LocalDateTime otkazanoAt;
+    private Instant otkazanoAt;
 
     @Column(name = "razlog_otkazivanja")
     private String razlogOtkazivanja;
@@ -111,6 +113,6 @@ public class Rezervacija {
     private TerminTure termin;
 
     public long getBrojNoci() {
-        return ChronoUnit.DAYS.between(rezervacijaOd, rezervacijaDo);
+        return ChronoUnit.DAYS.between(rezervacijaOd, rezervacijaDo) + 1;
     }
 }

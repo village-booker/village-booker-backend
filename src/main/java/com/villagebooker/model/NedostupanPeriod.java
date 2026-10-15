@@ -16,7 +16,7 @@ import java.time.LocalDate;
                 @Index(name = "idx_nedostupan_period_usluga", columnList = "usluga_id, datum_od")
         },
         check = {
-                @CheckConstraint(name = "chk_nedostupan_period_datumi", constraint = "datum_od < datum_do")
+                @CheckConstraint(name = "chk_nedostupan_period_datumi", constraint = "datum_od <= datum_do")
         })
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,6 +26,7 @@ public class NedostupanPeriod {
     @Column(name = "id")
     private Long id;
 
+    // zatvoren interval [datumOd, datumDo]: svaki datum je jedna blokirana noc
     @Column(name = "datum_od", nullable = false)
     private LocalDate datumOd;
 

@@ -39,7 +39,7 @@ public class Placanje {
     @Column(name = "status", nullable = false)
     private StatusPlacanja status;
 
-    @Column(name = "stripe_payment_id")
+    @Column(name = "stripe_payment_id", unique = true)
     private String stripePaymentId;
 
     @Column(name = "stripe_refund_id")

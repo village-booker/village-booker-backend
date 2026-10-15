@@ -18,7 +18,7 @@ import java.time.Instant;
                 @Index(name = "idx_termin_tura_datum", columnList = "tura_id, datum_od")
         },
         check = {
-                @CheckConstraint(name = "chk_termin_datumi", constraint = "datum_od < datum_do"),
+                @CheckConstraint(name = "chk_termin_datumi", constraint = "datum_od <= datum_do"),
                 @CheckConstraint(name = "chk_termin_br_prijavljenih", constraint = "br_prijavljenih >= 0")
         })
 @AllArgsConstructor
@@ -30,6 +30,7 @@ public class TerminTure {
     @Column(name = "id")
     private Long id;
 
+    // zatvoren interval [datumOd, datumDo]: datumDo = datumOd + tura.brojDana - 1 (poslednji dan ture)
     @Column(name = "datum_od", nullable = false)
     private LocalDate datumOd;
 

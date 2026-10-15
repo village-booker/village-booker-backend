@@ -12,7 +12,10 @@ import java.math.BigDecimal;
 @Entity
 @Getter
 @Setter
-@Table(name = "tura")
+@Table(name = "tura", check = {
+        @CheckConstraint(name = "chk_tura_broj_dana", constraint = "broj_dana >= 1"),
+        @CheckConstraint(name = "chk_tura_cena", constraint = "cena_po_osobi > 0")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @DiscriminatorValue("TURA")

@@ -40,7 +40,7 @@ public class UslugaIstorija {
     private Map<String, Object> novoStanje;
 
     @CreationTimestamp
-    @Column(name = "vreme_promene", nullable = false)
+    @Column(name = "vreme_promene", nullable = false, updatable = false)
     private Instant vremePromene;
 
     @Column(name = "uzrok")

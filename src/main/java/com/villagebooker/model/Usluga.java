@@ -7,7 +7,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -95,6 +97,10 @@ public abstract class Usluga {
     @Column(name = "procenat_povrata", precision = 5, scale = 2)
     private BigDecimal procenatPovrata;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vlasnik_id", nullable = false)
     private Korisnik vlasnik;
@@ -111,5 +117,5 @@ public abstract class Usluga {
             joinColumns = @JoinColumn(name = "usluga_id"),
             inverseJoinColumns = @JoinColumn(name = "karakteristika_id")
     )
-    private List<Karakteristika> karakteristike;
+    private Set<Karakteristika> karakteristike = new HashSet<>();
 }
