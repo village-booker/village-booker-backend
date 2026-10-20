@@ -29,7 +29,7 @@ import java.time.temporal.ChronoUnit;
                 @CheckConstraint(name = "chk_booking_dates", constraint = "start_date <= end_date"),
                 @CheckConstraint(name = "chk_booking_guest_count", constraint = "guest_count > 0"),
                 @CheckConstraint(name = "chk_booking_total_price", constraint = "total_price >= 0"),
-                @CheckConstraint(name = "chk_booking_amount_due", constraint = "amount_due BETWEEN 0 AND total_price"),
+                @CheckConstraint(name = "chk_booking_amount_left", constraint = "amount_left BETWEEN 0 AND total_price"),
                 @CheckConstraint(name = "chk_booking_refund_percentage", constraint = "refund_percentage BETWEEN 0 AND 100"),
                 @CheckConstraint(name = "chk_booking_deposit_percentage", constraint = "deposit_percentage BETWEEN 0 AND 100")
         })
