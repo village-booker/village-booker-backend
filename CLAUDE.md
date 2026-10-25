@@ -20,10 +20,17 @@ Jezik: kod (klase, polja, tabele, kolone, komentari u kodu) je na engleskom. Spe
 
 ## Struktura
 
-- `com.villagebooker.model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingHistory`, `ListingChangeRequest`).
-- `com.villagebooker.enums`: enumi. `com.villagebooker.repo`: Spring Data repository-ji (`XxxRepo`).
-- `com.villagebooker.common`: `exception` (`NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
-- Cilj (dogovara se): organizacija po feature-ima (`auth`, `user`, `listing`, `search`, `booking`, `review`, `moderation`, `notification`, `common`), svaki sa svojim controllerom, servisom, repository-jem i DTO-ima. Nove pakete praviti po tom principu.
+Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
+
+- `controller`: REST kontroleri (`AuthController`, `UserController`...).
+- `service`: poslovna logika i transakcije (`AuthService`, `UserService`...).
+- `dto`: request / response record-i, podeljeni po oblasti u podpakete (`dto.auth`, `dto.user`, kasnije `dto.listing`, `dto.booking`...).
+- `repo`: Spring Data repository-ji (`XxxRepo`).
+- `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingHistory`, `ListingChangeRequest`). `enums`: enumi.
+- `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
+- `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`).
+- `common`: `exception` (`NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
+- Testovi prate isti raspored paketa.
 
 ## Konvencije modela
 
@@ -41,6 +48,21 @@ Jezik: kod (klase, polja, tabele, kolone, komentari u kodu) je na engleskom. Spe
 - Veze: `@ManyToOne(fetch = LAZY)` uvek. Ne dodavati `@OneToMany` kolekcije osim kad roditelj upravlja životom dece. Za liste se pišu upiti u repository-ju, sa paginacijom.
 - Na entitetima ne koristiti `@Data`, `@ToString` ni `@EqualsAndHashCode` (rekurzija i učitavanje lazy veza).
 - Vrednosti koje se izvode ne čuvaju se (vlasnik rezervacije je `booking.listing.owner`, broj dana je `getDayCount()`).
+
+## Auth i uloge
+
+- Uloge: `USER` (gost), `OWNER` (domaćin), `ADMIN`. Hijerarhija u `SecurityConfig.roleHierarchy`: `OWNER > USER`, `ADMIN > USER` (admin nije domaćin). `hasRole('USER')` prolazi i za `OWNER` i `ADMIN`.
+- Registracija uvek pravi `USER`; request DTO nema polje `role` i nikad ga ne sme imati. `USER -> OWNER` ide kroz "Postani domaćin" (prihvatanje uslova za domaćine + bankovni račun), koji vraća novi token. Admin se postavlja ručno u bazi: `UPDATE app_user SET role = 'ADMIN' WHERE email = '...'`.
+- Uslovi korišćenja: registracija traži `acceptTerms: true` i upisuje `termsVersion` / `termsAcceptedAt`; domaćin isto za `hostTermsVersion` / `hostTermsAcceptedAt`. Trenutne verzije su `app.terms.version` i `app.terms.host-version`.
+- JWT (HS256, `JWT_SECRET` iz `.env`, trajanje `app.jwt.expiration`) nosi `sub` = id, `email`, `role`. Filter ne ide u bazu; u kontroleru: `@AuthenticationPrincipal AuthUser user`. Promena uloge važi tek sa novim tokenom.
+- Javno: `POST /api/auth/register`, `POST /api/auth/login`; sve ostalo traži token. Nove javne rute se dodaju u `SecurityConfig`.
+- Trajanje tokena 24h, bez refresh tokena; odjava = frontend briše token. CORS origin-i za produkciju se dodaju kad bude poznat domen.
+- Lozinke: BCrypt (max 72 bajta). Login za nepostojeći email i pogrešnu lozinku vraća isti 401.
+- BCrypt (`encode` / `matches`, ~100 ms) se nikad ne izvršava unutar `@Transactional` metode, jer bi za to vreme držao konekciju iz pool-a. Zato `AuthService.register` / `login` namerno nemaju `@Transactional`.
+- Email se uvek čuva i traži malim slovima (`AuthService` normalizuje), pa `UserRepo` koristi `findByEmail` / `existsByEmail`, ne `...IgnoreCase` (koji ne koristi indeks).
+- Odluka: registracija sa već postojećim emailom vraća 409 "Email is already registered." (korisnik mora da zna zašto ne može da se registruje). Posledica: napadač može da proverava koji su emailovi registrovani. Prihvaćeno za MVP; ako bude potrebno, menja se u opšti odgovor + mejl vlasniku naloga.
+- Poznato ograničenje: obrisan ili blokiran korisnik zadržava pristup do isteka tokena (24h), jer filter ne ide u bazu. Kad se uvede blokiranje naloga, odlučiti da li se token proverava u bazi.
+- Dozvoljeni frontend origin-i: `app.cors.allowed-origins`.
 
 ## Rezervacije (sažetak spec-a)
 

@@ -48,7 +48,22 @@ public class User {
     @Column(name = "bank_account")
     private String bankAccount;
 
+    // USER < OWNER (host), ADMIN; see SecurityConfig.roleHierarchy
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
+
+    // general terms of use, accepted at registration (version = app.terms.version at that moment)
+    @Column(name = "terms_version", nullable = false)
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at", nullable = false)
+    private Instant termsAcceptedAt;
+
+    // host terms, accepted when the user becomes OWNER; null = not a host
+    @Column(name = "host_terms_version")
+    private String hostTermsVersion;
+
+    @Column(name = "host_terms_accepted_at")
+    private Instant hostTermsAcceptedAt;
 }
