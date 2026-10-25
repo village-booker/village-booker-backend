@@ -64,6 +64,15 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - Poznato ograničenje: obrisan ili blokiran korisnik zadržava pristup do isteka tokena (24h), jer filter ne ide u bazu. Kad se uvede blokiranje naloga, odlučiti da li se token proverava u bazi.
 - Dozvoljeni frontend origin-i: `app.cors.allowed-origins`.
 
+## Oglasi (usluge)
+
+- Rute: domaćin `/api/owner/listings` (`OwnerListingController`, `hasRole('OWNER')`), javna pretraga kasnije `/api/listings`, admin `/api/admin/listings`.
+- Domaćin: `POST /accommodations`, `POST /tours` (novi oglas je uvek `PENDING`; `status`, `rating`, `reviewCount` nikad ne dolaze iz request-a), `GET` "moji oglasi" (sve osim `DELETED`, najnoviji prvi, `?page=&size=` do 100, odgovor `PageResponse`), `GET /{id}` (tuđi oglas -> 403 `NOT_LISTING_OWNER`, nepostojeći ili `DELETED` -> 404).
+- Request-ovi za smeštaj i turu su ravni JSON objekti i implementiraju zajednički interfejs `ListingRequest`, pa se zajednička pravila proveravaju jednom (`OwnerListingService.checkCommonRules`).
+- Pravila koja važe za sve oglase: `minGuests <= maxGuests`; smeštaj još `minGuests <= baseGuests <= maxGuests`. Otkazivanje: `FREE` traži `freeCancellationDays` i ne sme imati `refundPercentage`; `PARTIAL` traži `refundPercentage`, a `freeCancellationDays` je opcion; `NON_REFUNDABLE` nema ni jedno ni drugo. Kapara (`depositPercentage > 0`) nije dozvoljena uz `ON_SITE`.
+- `ListingResponse` ima `accommodation` ili `tour` (tačno jedno popunjeno, prema `type`). `ListingSummaryResponse.price` je cena noćenja (smeštaj) ili cena po osobi (tura).
+- `district` je za sada slobodan tekst (šifarnik je otvorena odluka).
+
 ## Rezervacije (sažetak spec-a)
 
 - Snimak uslova: cena, politika otkazivanja, `freeCancellationUntil`, procenti i način plaćanja kopiraju se sa `Listing` na `Booking` samo u servisu pri kreiranju, nikad iz request DTO-a, i posle se ne menjaju. Logika otkazivanja i refunda čita samo polja sa rezervacije.

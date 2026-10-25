@@ -44,7 +44,7 @@ public abstract class Listing {
     @Column(name = "status", nullable = false)
     private ListingStatus status;
 
-    @Column(name = "description")
+    @Column(name = "description", length = 4000)
     private String description;
 
     @Column(name = "requires_owner_approval", nullable = false)
