@@ -75,7 +75,9 @@ class BecomeHostFlowTest {
         becomeHost(token, VALID_ACCOUNT, true).andExpect(status().isOk());
 
         // the old (USER) token is used on purpose: the service checks the role in the database
-        becomeHost(token, VALID_ACCOUNT, true).andExpect(status().isConflict());
+        becomeHost(token, VALID_ACCOUNT, true)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("USER_ALREADY_HOST"));
     }
 
     @Test
@@ -92,7 +94,9 @@ class BecomeHostFlowTest {
         String email = uniqueEmail();
         String token = register(email);
 
-        becomeHost(token, "160-5100000123456-66", true).andExpect(status().isBadRequest());
+        becomeHost(token, "160-5100000123456-66", true)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_BANK_ACCOUNT"));
 
         assertThat(userRepo.findByEmail(email).orElseThrow().getRole()).isEqualTo(Role.USER);
     }
@@ -110,7 +114,9 @@ class BecomeHostFlowTest {
         userRepo.saveAndFlush(admin);
         String token = jwtService.issue(admin).token();
 
-        becomeHost(token, VALID_ACCOUNT, true).andExpect(status().isForbidden());
+        becomeHost(token, VALID_ACCOUNT, true)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ADMIN_CANNOT_BE_HOST"));
     }
 
     @Test

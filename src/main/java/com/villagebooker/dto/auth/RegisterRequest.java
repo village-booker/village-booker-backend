@@ -1,5 +1,6 @@
 package com.villagebooker.dto.auth;
 
+import com.villagebooker.enums.Language;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +14,8 @@ public record RegisterRequest(
         @NotBlank @Size(max = 100) String firstName,
         @NotBlank @Size(max = 100) String lastName,
         @Size(max = 30) String phone,
+        // optional: the language selected in the app before registering; null -> SR
+        Language language,
         @AssertTrue(message = "must accept the terms of use") boolean acceptTerms
 ) {
 }

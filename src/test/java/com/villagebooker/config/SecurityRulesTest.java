@@ -71,7 +71,8 @@ class SecurityRulesTest {
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.instance").value("/api/probe/admin"));
+                .andExpect(jsonPath("$.instance").value("/api/probe/admin"))
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test

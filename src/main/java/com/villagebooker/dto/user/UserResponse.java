@@ -1,5 +1,6 @@
 package com.villagebooker.dto.user;
 
+import com.villagebooker.enums.Language;
 import com.villagebooker.enums.Role;
 import com.villagebooker.model.User;
 
@@ -11,7 +12,8 @@ public record UserResponse(
         String phone,
         String imageUrl,
         Role role,
-        boolean host
+        boolean host,
+        Language language
 ) {
 
     public static UserResponse from(User user) {
@@ -23,6 +25,7 @@ public record UserResponse(
                 user.getPhone(),
                 user.getImageUrl(),
                 user.getRole(),
-                user.getRole() == Role.OWNER);
+                user.getRole() == Role.OWNER,
+                user.getLanguage());
     }
 }

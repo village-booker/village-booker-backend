@@ -29,7 +29,7 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingHistory`, `ListingChangeRequest`). `enums`: enumi.
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
 - `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`).
-- `common`: `bank` (`BankAccountNumber`), `exception` (`NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
+- `common`: `bank` (`BankAccountNumber`), `exception` (`ErrorCode`, `ApiException` i njene podklase `NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
 - Testovi prate isti raspored paketa.
 
 ## Konvencije modela
@@ -77,6 +77,8 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - `@Transactional` na servisu; čitanja sa `readOnly = true`. Spoljni pozivi (email, plaćanje) ne idu unutar duge transakcije; email se šalje posle commit-a.
 - Uloge se proveravaju sa `@PreAuthorize`, a vlasništvo (vlasnik menja samo svoj oglas) u servisu.
 - Greške se vraćaju kao `ProblemDetail` iz jednog `@RestControllerAdvice` (`common.exception.GlobalExceptionHandler`). Servis baca `NotFoundException` (404), `ConflictException` (409), `BadRequestException` (400, prekršeno poslovno pravilo) ili `ForbiddenException` (403, nije vlasnik); ne pravi `ResponseEntity` sa greškom ručno. Detalji iz baze i stack trace idu samo u log, nikad klijentu.
+- Jezik (dugme SR / EN): backend ne prevodi ništa, prevodi frontend. Zato svaka greška ima stabilan `code` iz enuma `ErrorCode` (`ApiException` je baza svih poslovnih izuzetaka: `new ConflictException(ErrorCode.X, "English detail")`, opciono i `params` za vrednosti u prevedenom tekstu). `detail` je na engleskom i služi programerima. Validacija vraća `errors: {polje: {code: "Size", params: {min, max}, message}}`, gde je `code` ime anotacije. Novo poslovno pravilo = nov kod u `ErrorCode`; postojeći kod se ne preimenuje kad ga frontend koristi. Enumi (statusi i sl.) idu kao kodovi i frontend ih prevodi.
+- Izabrani jezik se čuva na korisniku (`User.language`, `SR` podrazumevano): opciono polje `language` pri registraciji, `PUT /api/users/me/language`, vraća se u `UserResponse`. Koristi se za mejlove i da bi izbor pratio korisnika na drugim uređajima. Sadržaj koji pišu korisnici (opisi oglasa, recenzije) se ne prevodi.
 
 ## Otvorene odluke (ne implementirati bez dogovora tima)
 

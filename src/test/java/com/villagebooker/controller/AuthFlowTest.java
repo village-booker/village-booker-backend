@@ -15,6 +15,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +44,7 @@ class AuthFlowTest {
                 .andExpect(jsonPath("$.user.email").value(email))
                 .andExpect(jsonPath("$.user.role").value("USER"))
                 .andExpect(jsonPath("$.user.host").value(false))
+                .andExpect(jsonPath("$.user.language").value("SR"))
                 .andExpect(jsonPath("$.user.passwordHash").doesNotExist());
     }
 
@@ -54,7 +56,8 @@ class AuthFlowTest {
         mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(email.toUpperCase(), PASSWORD, true)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_REGISTERED"));
     }
 
     @Test
@@ -63,7 +66,8 @@ class AuthFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(uniqueEmail(), PASSWORD, false)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.acceptTerms").exists());
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors.acceptTerms.code").value("AssertTrue"));
     }
 
     @Test
@@ -98,7 +102,8 @@ class AuthFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginJson(email, "wrong-password")))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
 
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -123,13 +128,59 @@ class AuthFlowTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.instance").value("/api/users/me"));
+                .andExpect(jsonPath("$.instance").value("/api/users/me"))
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test
     void meWithInvalidTokenReturns401() throws Exception {
         mvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void registerWithLanguageStoresIt() throws Exception {
+        String json = registerJson(uniqueEmail(), PASSWORD, true).replace("}", ", \"language\": \"EN\"}");
+
+        mvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.language").value("EN"));
+    }
+
+    @Test
+    void userCanSwitchLanguage() throws Exception {
+        String token = register(uniqueEmail());
+
+        mvc.perform(put("/api/users/me/language")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"language\": \"EN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.language").value("EN"));
+
+        mvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.language").value("EN"));
+    }
+
+    @Test
+    void unknownOrMissingLanguageReturns400() throws Exception {
+        String token = register(uniqueEmail());
+
+        mvc.perform(put("/api/users/me/language")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"language\": \"DE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+
+        mvc.perform(put("/api/users/me/language")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.language.code").value("NotNull"));
     }
 
     @Test

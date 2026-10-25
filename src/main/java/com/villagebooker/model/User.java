@@ -1,11 +1,13 @@
 package com.villagebooker.model;
 
+import com.villagebooker.enums.Language;
 import com.villagebooker.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -52,6 +54,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
+
+    // language picked in the app (UI, emails); the default also fills existing rows when the column is added
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'SR'")
+    @Column(name = "language", nullable = false, length = 2)
+    private Language language = Language.SR;
 
     // general terms of use, accepted at registration (version = app.terms.version at that moment)
     @Column(name = "terms_version", nullable = false)

@@ -1,9 +1,22 @@
 package com.villagebooker.common.exception;
 
-// 403: authenticated, but not allowed to touch this resource (e.g. not the owner of the listing)
-public class ForbiddenException extends RuntimeException {
+import org.springframework.http.HttpStatus;
 
-    public ForbiddenException(String message) {
-        super(message);
+import java.util.Map;
+
+// 403: authenticated, but not allowed to touch this resource (e.g. not the owner of the listing)
+public class ForbiddenException extends ApiException {
+
+    public ForbiddenException(ErrorCode code, String message) {
+        super(code, message, null);
+    }
+
+    public ForbiddenException(ErrorCode code, String message, Map<String, Object> params) {
+        super(code, message, params);
+    }
+
+    @Override
+    public HttpStatus status() {
+        return HttpStatus.FORBIDDEN;
     }
 }

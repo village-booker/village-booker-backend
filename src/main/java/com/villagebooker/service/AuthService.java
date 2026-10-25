@@ -7,6 +7,8 @@ import com.villagebooker.dto.auth.LoginRequest;
 import com.villagebooker.dto.auth.RegisterRequest;
 import com.villagebooker.common.exception.BadRequestException;
 import com.villagebooker.common.exception.ConflictException;
+import com.villagebooker.common.exception.ErrorCode;
+import com.villagebooker.enums.Language;
 import com.villagebooker.enums.Role;
 import com.villagebooker.model.User;
 import com.villagebooker.repo.UserRepo;
@@ -50,10 +52,10 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
         if (userRepo.existsByEmail(email)) {
-            throw new ConflictException("Email is already registered.");
+            throw new ConflictException(ErrorCode.EMAIL_ALREADY_REGISTERED, "Email is already registered.");
         }
         if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            throw new BadRequestException("Password is too long.");
+            throw new BadRequestException(ErrorCode.PASSWORD_TOO_LONG, "Password is too long.");
         }
         String passwordHash = passwordEncoder.encode(request.password());
 
@@ -64,6 +66,7 @@ public class AuthService {
         user.setLastName(request.lastName().trim());
         user.setPhone(blankToNull(request.phone()));
         user.setRole(Role.USER);
+        user.setLanguage(request.language() != null ? request.language() : Language.SR);
         user.setTermsVersion(terms.version());
         user.setTermsAcceptedAt(Instant.now(clock));
 
