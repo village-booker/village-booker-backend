@@ -29,7 +29,7 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingHistory`, `ListingChangeRequest`). `enums`: enumi.
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
 - `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`).
-- `common`: `exception` (`NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
+- `common`: `bank` (`BankAccountNumber`), `exception` (`NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
 - Testovi prate isti raspored paketa.
 
 ## Konvencije modela
@@ -52,7 +52,7 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 ## Auth i uloge
 
 - Uloge: `USER` (gost), `OWNER` (domaćin), `ADMIN`. Hijerarhija u `SecurityConfig.roleHierarchy`: `OWNER > USER`, `ADMIN > USER` (admin nije domaćin). `hasRole('USER')` prolazi i za `OWNER` i `ADMIN`.
-- Registracija uvek pravi `USER`; request DTO nema polje `role` i nikad ga ne sme imati. `USER -> OWNER` ide kroz "Postani domaćin" (prihvatanje uslova za domaćine + bankovni račun), koji vraća novi token. Admin se postavlja ručno u bazi: `UPDATE app_user SET role = 'ADMIN' WHERE email = '...'`.
+- Registracija uvek pravi `USER`; request DTO nema polje `role` i nikad ga ne sme imati. `USER -> OWNER` ide kroz "Postani domaćin": `POST /api/users/me/become-host` sa `bankAccount` i `acceptHostTerms: true`, vraća novi token (isti oblik kao login). Uloga se proverava iz baze, ne iz tokena: već domaćin -> 409, admin -> 403. Račun je srpski format `XXX-XXXXXXXXXXXXX-XX` sa kontrolnim brojem po modulu 97 (`common.bank.BankAccountNumber`); prima se i skraćen srednji deo ili 18 cifara bez crtica, a čuva se uvek pun oblik. Admin se postavlja ručno u bazi: `UPDATE app_user SET role = 'ADMIN' WHERE email = '...'`.
 - Uslovi korišćenja: registracija traži `acceptTerms: true` i upisuje `termsVersion` / `termsAcceptedAt`; domaćin isto za `hostTermsVersion` / `hostTermsAcceptedAt`. Trenutne verzije su `app.terms.version` i `app.terms.host-version`.
 - JWT (HS256, `JWT_SECRET` iz `.env`, trajanje `app.jwt.expiration`) nosi `sub` = id, `email`, `role`. Filter ne ide u bazu; u kontroleru: `@AuthenticationPrincipal AuthUser user`. Promena uloge važi tek sa novim tokenom.
 - Javno: `POST /api/auth/register`, `POST /api/auth/login`; sve ostalo traži token. Nove javne rute se dodaju u `SecurityConfig`.

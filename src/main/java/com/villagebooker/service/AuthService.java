@@ -10,7 +10,6 @@ import com.villagebooker.common.exception.ConflictException;
 import com.villagebooker.enums.Role;
 import com.villagebooker.model.User;
 import com.villagebooker.repo.UserRepo;
-import com.villagebooker.dto.user.UserResponse;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -87,8 +86,7 @@ public class AuthService {
     }
 
     private AuthResponse toAuthResponse(User user) {
-        JwtService.IssuedToken token = jwtService.issue(user);
-        return new AuthResponse(token.token(), "Bearer", token.expiresAt(), UserResponse.from(user));
+        return AuthResponse.of(jwtService.issue(user), user);
     }
 
     private static String normalizeEmail(String email) {

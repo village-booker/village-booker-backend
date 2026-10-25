@@ -1,11 +1,16 @@
 package com.villagebooker.controller;
 
-import com.villagebooker.service.UserService;
-import com.villagebooker.security.AuthUser;
+import com.villagebooker.dto.auth.AuthResponse;
+import com.villagebooker.dto.user.BecomeHostRequest;
 import com.villagebooker.dto.user.UserResponse;
+import com.villagebooker.security.AuthUser;
+import com.villagebooker.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,5 +25,11 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal AuthUser authUser) {
         return userService.getById(authUser.id());
+    }
+
+    @PostMapping("/me/become-host")
+    public AuthResponse becomeHost(@AuthenticationPrincipal AuthUser authUser,
+                                   @Valid @RequestBody BecomeHostRequest request) {
+        return userService.becomeHost(authUser.id(), request);
     }
 }
