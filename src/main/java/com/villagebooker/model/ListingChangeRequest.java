@@ -30,9 +30,16 @@ public class ListingChangeRequest {
     @Column(name = "id")
     private Long id;
 
+    // only the fields the owner changed: {"pricePerPerson": "4000", "maxGuests": "10"}
+    // values are text (see ListingFields), so money keeps exact precision
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "requested_changes", columnDefinition = "jsonb")
+    @Column(name = "requested_changes", columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> requestedChanges;
+
+    // values of the same fields right before the request was applied; filled on approval, null otherwise
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "previous_values", columnDefinition = "jsonb")
+    private Map<String, Object> previousValues;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
@@ -45,8 +52,13 @@ public class ListingChangeRequest {
     @Column(name = "processed_at")
     private Instant processedAt;
 
-    @Column(name = "rejection_reason")
+    @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
+
+    // two admins deciding on the same request at once: the second one fails with 409
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requester_id", nullable = false)

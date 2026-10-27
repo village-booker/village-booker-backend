@@ -16,6 +16,8 @@ public record ListingResponse(
         Long id,
         ListingType type,
         ListingStatus status,
+        // filled only while status = REJECTED
+        String rejectionReason,
         String name,
         String description,
         boolean requiresOwnerApproval,
@@ -75,6 +77,7 @@ public record ListingResponse(
                 listing.getId(),
                 type,
                 listing.getStatus(),
+                listing.getRejectionReason(),
                 listing.getName(),
                 listing.getDescription(),
                 listing.isRequiresOwnerApproval(),

@@ -47,6 +47,9 @@ public abstract class Listing {
     @Column(name = "description", length = 4000)
     private String description;
 
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
+
     @Column(name = "requires_owner_approval", nullable = false)
     private boolean requiresOwnerApproval = false;
 

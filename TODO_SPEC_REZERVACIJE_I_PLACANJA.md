@@ -19,7 +19,7 @@ Tekst ispod koristi srpske nazive; u kodu i bazi vaze engleski. Tabele su snake_
 | `NedostupanPeriod` | `UnavailablePeriod` | `unavailable_period` |
 | `OmiljenaUsluga` | `Favorite` | `favorite` |
 | `UslugaSlika` | `ListingImage` | `listing_image` |
-| `UslugaIstorija` | `ListingHistory` | `listing_history` |
+| `UslugaIstorijaStatusa` | `ListingStatusHistory` | `listing_status_history` |
 | `ZahtevZaIzmenuUsluge` | `ListingChangeRequest` | `listing_change_request` |
 | `Karakteristika` | `Feature` | `feature` (veza: `listing_feature`) |
 
@@ -341,7 +341,7 @@ Hard delete (red se stvarno brise):
 | `NedostupanPeriod` | |
 | `TerminTure` | samo bez aktivnih rezervacija; inace se otkazuje (9.2) |
 
-Nikad se ne brisu: `Rezervacija`, `Placanje`, `Recenzija`, `UslugaIstorija`.
+Nikad se ne brisu: `Rezervacija`, `Placanje`, `Recenzija`, `UslugaIstorijaStatusa`, `ZahtevZaIzmenuUsluge`.
 
 ### 9.2 Vlasnik otkazuje jednu rezervaciju (ili termin ture)
 
@@ -385,7 +385,7 @@ Kasnije (v2), ako se uvede automatika: pravila penala na nivou platforme (npr. o
 - Entitete ne izlagati direktno.
 - Koristiti `Request DTO` + validaciju.
 - Koristiti `Response DTO`.
-- Mapiranje preko MapStruct.
+- Mapiranje rucno, staticka metoda `from(...)` na response DTO-u (npr. `UserResponse.from(user)`). MapStruct se ne koristi.
 - Za liste koristiti projekcije/light DTO gde je moguce.
 
 ## 11) Optimistic locking
@@ -416,7 +416,7 @@ Zavrseno:
 
 Sledece:
 
-1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`). Dodati MapStruct u `build.gradle` uz prvi DTO.
+1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`).
 2. Usluge: vlasnik pravi smestaj / turu (slike, karakteristike, termini ture), admin odobrava, zahtevi za izmenu.
 3. Pretraga i prikaz za goste (`ListingRepo` + `Specification`).
 4. Rezervacije: kreiranje (lock + preklapanje / kapacitet), odobravanje, otkazivanje, refund pravila (sekcije 1.1, 3, 5, 9).
@@ -473,7 +473,7 @@ Paket `com.villagebooker.repo`, naziv `XxxRepo`. Metode se dodaju kad ih servis 
 | `PaymentRepo` | placanja rezervacije, `findByStripePaymentId` (buducnost) |
 | `ReviewRepo` | po rezervaciji, recenzije usluge, `averageRatingForListing` + `countByBookingListingId` za preracun `rating` / `reviewCount` |
 | `FavoriteRepo` | lista korisnika (sa `listing`), `exists...`, `delete...` (idempotentno, unutar `@Transactional`) |
-| `ListingImageRepo`, `ListingHistoryRepo`, `ListingChangeRequestRepo`, `FeatureRepo` | slike po redosledu, istorija, admin red zahteva, katalog karakteristika |
+| `ListingImageRepo`, `ListingStatusHistoryRepo`, `ListingChangeRequestRepo`, `FeatureRepo` | slike po redosledu, istorija, admin red zahteva, katalog karakteristika |
 
 Pravila:
 

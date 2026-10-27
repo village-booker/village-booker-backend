@@ -26,7 +26,7 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - `service`: poslovna logika i transakcije (`AuthService`, `UserService`...).
 - `dto`: request / response record-i, podeljeni po oblasti u podpakete (`dto.auth`, `dto.user`, kasnije `dto.listing`, `dto.booking`...).
 - `repo`: Spring Data repository-ji (`XxxRepo`).
-- `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingHistory`, `ListingChangeRequest`). `enums`: enumi.
+- `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`). `enums`: enumi.
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
 - `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`).
 - `common`: `bank` (`BankAccountNumber`), `exception` (`ErrorCode`, `ApiException` i njene podklase `NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
@@ -68,7 +68,16 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 
 - Rute: domaćin `/api/owner/listings` (`OwnerListingController`, `hasRole('OWNER')`), javna pretraga kasnije `/api/listings`, admin `/api/admin/listings`.
 - Domaćin: `POST /accommodations`, `POST /tours` (novi oglas je uvek `PENDING`; `status`, `rating`, `reviewCount` nikad ne dolaze iz request-a), `GET` "moji oglasi" (sve osim `DELETED`, najnoviji prvi, `?page=&size=` do 100, odgovor `PageResponse`), `GET /{id}` (tuđi oglas -> 403 `NOT_LISTING_OWNER`, nepostojeći ili `DELETED` -> 404).
-- Request-ovi za smeštaj i turu su ravni JSON objekti i implementiraju zajednički interfejs `ListingRequest`, pa se zajednička pravila proveravaju jednom (`OwnerListingService.checkCommonRules`).
+- Izmena: `PUT /accommodations/{id}`, `PUT /tours/{id}` (ceo oglas, isti request kao za kreiranje) samo dok je oglas `PENDING` (admin ga još nije video); drugi status -> 409 `LISTING_NOT_EDITABLE`, pogrešan tip -> 400 `LISTING_TYPE_MISMATCH`.
+- Moderacija (`AdminListingController`, `/api/admin/listings`, `hasRole('ADMIN')`): `GET ?status=PENDING` (red čekanja, najstariji prvi), `GET /{id}` (oglas + podaci o domaćinu), `POST /{id}/approve`, `POST /{id}/reject` sa `reason`. Odluka samo nad `PENDING`, inače 409 `LISTING_NOT_PENDING`.
+- Zahtevi za izmenu (`ChangeRequestService`): sve izmene oglasa o kome je admin već odlučio (`APPROVED`, `REJECTED`, `PAUSED_BY_OWNER`) idu kroz `ListingChangeRequest`. Domaćin: `POST /accommodations/{id}/change-requests`, `POST /tours/{id}/change-requests` (ceo oglas u telu, ista pravila kao pri kreiranju), `GET /{id}/change-requests`. Admin: `/api/admin/change-requests` (`GET ?status=PENDING`, `GET /{id}`, `POST /{id}/approve`, `POST /{id}/reject` sa `reason`).
+    - U `requestedChanges` se čuvaju samo izmenjena polja; pri odobravanju se pre primene u `previousValues` upišu stare vrednosti istih polja. Vrednosti su tekst (`ListingFields`), da novac ostane tačan i da 5000 i 5000.00 budu isto. Odgovor ima `oldValues` (za `PENDING` trenutne vrednosti sa oglasa, za `APPROVED` `previousValues`).
+    - Najviše jedan zahtev na čekanju po oglasu (provera pod lockom oglasa), inače 409 `CHANGE_REQUEST_ALREADY_PENDING`; bez izmena 400 `NO_CHANGES`; `@Version` na zahtevu štiti od dva admina odjednom.
+    - Odobren zahtev za `REJECTED` oglas odobrava i oglas (`REJECTED -> APPROVED`, `rejectionReason` se briše): ispravka i ponovni pregled su jedna odluka.
+    - Novo polje koje domaćin sme da menja mora se dodati u `ListingFields`, inače ne može da se menja kroz zahtev.
+- Krug: kreiranje -> `PENDING` (direktne izmene) -> `APPROVED` ili `REJECTED` (+ `rejectionReason`, domaćin ga vidi) -> dalje izmene samo kroz zahtev za izmenu.
+- `ListingStatusHistory` beleži samo promene statusa (`oldStatus`, `newStatus`, `changedBy`, `reason`) preko `ListingStatusHistoryWriter`; sadržaj izmena je u `ListingChangeRequest`. Izmene `PENDING` oglasa se ne beleže.
+- Request-ovi za smeštaj i turu (`AccommodationRequest`, `TourRequest`) su ravni JSON objekti i implementiraju zajednički interfejs `ListingRequest`, pa se zajednička pravila proveravaju jednom (`OwnerListingService.checkCommonRules`).
 - Pravila koja važe za sve oglase: `minGuests <= maxGuests`; smeštaj još `minGuests <= baseGuests <= maxGuests`. Otkazivanje: `FREE` traži `freeCancellationDays` i ne sme imati `refundPercentage`; `PARTIAL` traži `refundPercentage`, a `freeCancellationDays` je opcion; `NON_REFUNDABLE` nema ni jedno ni drugo. Kapara (`depositPercentage > 0`) nije dozvoljena uz `ON_SITE`.
 - `ListingResponse` ima `accommodation` ili `tour` (tačno jedno popunjeno, prema `type`). `ListingSummaryResponse.price` je cena noćenja (smeštaj) ili cena po osobi (tura).
 - `district` je za sada slobodan tekst (šifarnik je otvorena odluka).
