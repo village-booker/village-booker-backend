@@ -42,7 +42,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/features").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/features", "/api/listings", "/api/listings/*",
+                                "/api/listings/*/availability").permitAll()
                         .requestMatchers("/error").permitAll()
                         // fine-grained checks (roles, ownership) are done with @PreAuthorize and in services
                         .anyRequest().authenticated())

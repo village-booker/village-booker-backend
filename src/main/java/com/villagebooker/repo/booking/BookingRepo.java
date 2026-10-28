@@ -38,6 +38,20 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
                               @Param("endDate") LocalDate endDate,
                               @Param("statuses") Collection<BookingStatus> statuses);
 
+    // taken nights of an accommodation in [from, to] for the guest's calendar (tour bookings excluded)
+    @Query("""
+            select b from Booking b
+            where b.listing.id = :listingId
+              and b.tourDate is null
+              and b.status in :statuses
+              and b.startDate <= :to
+              and :from <= b.endDate
+            """)
+    List<Booking> findOverlapping(@Param("listingId") Long listingId,
+                                  @Param("from") LocalDate from,
+                                  @Param("to") LocalDate to,
+                                  @Param("statuses") Collection<BookingStatus> statuses);
+
     // scheduler: bookings whose expiresAt has passed (statuses = BookingStatus.EXPIRABLE)
     List<Booking> findByStatusInAndExpiresAtBefore(Collection<BookingStatus> statuses, Instant now);
 

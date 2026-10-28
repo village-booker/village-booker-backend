@@ -20,10 +20,11 @@ public record ListingSummaryResponse(
         Integer maxGuests,
         BigDecimal price,
         BigDecimal rating,
-        Integer reviewCount
+        Integer reviewCount,
+        String mainImageUrl
 ) {
 
-    public static ListingSummaryResponse from(Listing listing) {
+    public static ListingSummaryResponse from(Listing listing, String mainImageUrl) {
         ListingType type;
         BigDecimal price;
         switch (listing) {
@@ -39,6 +40,6 @@ public record ListingSummaryResponse(
         }
         return new ListingSummaryResponse(listing.getId(), type, listing.getStatus(), listing.getName(),
                 listing.getPlace(), listing.getDistrict(), listing.getMinGuests(), listing.getMaxGuests(),
-                price, listing.getRating(), listing.getReviewCount());
+                price, listing.getRating(), listing.getReviewCount(), mainImageUrl);
     }
 }

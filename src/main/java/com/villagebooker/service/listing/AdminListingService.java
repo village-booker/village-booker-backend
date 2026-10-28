@@ -12,6 +12,7 @@ import com.villagebooker.model.Listing;
 import com.villagebooker.repo.listing.ListingRepo;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +26,13 @@ public class AdminListingService {
 
     private final ListingRepo listingRepo;
     private final ListingStatusHistoryWriter historyWriter;
+    private final MainImages mainImages;
 
     @Transactional(readOnly = true)
     public PageResponse<ListingSummaryResponse> findByStatus(ListingStatus status, Pageable pageable) {
-        return PageResponse.of(listingRepo.findByStatus(status, pageable), ListingSummaryResponse::from);
+        Page<Listing> page = listingRepo.findByStatus(status, pageable);
+        Map<Long, String> images = mainImages.forOwnerOrAdmin(page.getContent());
+        return PageResponse.of(page, l -> ListingSummaryResponse.from(l, images.get(l.getId())));
     }
 
     @Transactional(readOnly = true)

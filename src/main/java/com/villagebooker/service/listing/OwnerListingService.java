@@ -18,6 +18,7 @@ import com.villagebooker.repo.listing.ListingRepo;
 import com.villagebooker.repo.user.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class OwnerListingService {
 
     private final ListingRepo listingRepo;
     private final UserRepo userRepo;
+    private final MainImages mainImages;
 
     // a new listing waits for admin approval (PENDING); status, rating and reviewCount never come from the request
     @Transactional
@@ -78,9 +80,9 @@ public class OwnerListingService {
 
     @Transactional(readOnly = true)
     public PageResponse<ListingSummaryResponse> findMine(Long ownerId, Pageable pageable) {
-        return PageResponse.of(
-                listingRepo.findByOwnerIdAndStatusNot(ownerId, ListingStatus.DELETED, pageable),
-                ListingSummaryResponse::from);
+        Page<Listing> page = listingRepo.findByOwnerIdAndStatusNot(ownerId, ListingStatus.DELETED, pageable);
+        Map<Long, String> images = mainImages.forOwnerOrAdmin(page.getContent());
+        return PageResponse.of(page, l -> ListingSummaryResponse.from(l, images.get(l.getId())));
     }
 
     @Transactional(readOnly = true)

@@ -419,12 +419,12 @@ Zavrseno:
 
 - [x] model: entiteti, enumi, ogranicenja, indeksi, `@Version`, engleski nazivi
 - [x] repozitorijumi (sekcija 15)
+- [x] 1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`), postani domacin, jezik.
+- [x] 2. Usluge: vlasnik pravi smestaj / turu (slike, karakteristike, termini ture), admin odobrava, zahtevi za izmenu. Ostalo: pauziranje i brisanje usluge (9.3), radi se uz rezervacije.
+- [x] 3. Pretraga i prikaz za goste (`ListingRepo` + `Specification`).
 
 Sledece:
 
-1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`).
-2. Usluge: vlasnik pravi smestaj / turu (slike, karakteristike, termini ture), admin odobrava, zahtevi za izmenu.
-3. Pretraga i prikaz za goste (`ListingRepo` + `Specification`).
 4. Rezervacije: kreiranje (lock + preklapanje / kapacitet), odobravanje, otkazivanje, refund pravila (sekcije 1.1, 3, 5, 9).
 5. Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).

@@ -12,6 +12,16 @@ public interface UnavailablePeriodRepo extends JpaRepository<UnavailablePeriod, 
 
     List<UnavailablePeriod> findByListingIdOrderByStartDate(Long listingId);
 
+    @Query("""
+            select p from UnavailablePeriod p
+            where p.listing.id = :listingId
+              and p.startDate <= :to
+              and :from <= p.endDate
+            """)
+    List<UnavailablePeriod> findOverlapping(@Param("listingId") Long listingId,
+                                            @Param("from") LocalDate from,
+                                            @Param("to") LocalDate to);
+
     // closed intervals [start, end] overlap (spec 1.2)
     @Query("""
             select case when count(p) > 0 then true else false end
