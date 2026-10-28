@@ -1,7 +1,7 @@
 package com.villagebooker.dto.user;
 
-import com.villagebooker.enums.Language;
-import com.villagebooker.enums.Role;
+import com.villagebooker.enums.user.Language;
+import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.User;
 
 public record UserResponse(

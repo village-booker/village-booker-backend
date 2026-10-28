@@ -1,7 +1,7 @@
 package com.villagebooker.security;
 
 import com.villagebooker.config.JwtProperties;
-import com.villagebooker.enums.Role;
+import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.User;
 import org.junit.jupiter.api.Test;
 

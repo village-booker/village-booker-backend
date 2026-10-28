@@ -1,6 +1,6 @@
 package com.villagebooker.dto.listing;
 
-import com.villagebooker.enums.ChangeRequestStatus;
+import com.villagebooker.enums.listing.ChangeRequestStatus;
 import com.villagebooker.model.ListingChangeRequest;
 import com.villagebooker.model.User;
 

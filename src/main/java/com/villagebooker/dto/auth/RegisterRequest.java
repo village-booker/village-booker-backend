@@ -1,6 +1,6 @@
 package com.villagebooker.dto.auth;
 
-import com.villagebooker.enums.Language;
+import com.villagebooker.enums.user.Language;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

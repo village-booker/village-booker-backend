@@ -1,7 +1,0 @@
-package com.villagebooker.enums;
-
-// languages of the app; JSON and database use the constant name ("SR", "EN")
-public enum Language {
-    SR,
-    EN
-}

@@ -1,6 +1,6 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.TourDifficulty;
+import com.villagebooker.enums.listing.TourDifficulty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

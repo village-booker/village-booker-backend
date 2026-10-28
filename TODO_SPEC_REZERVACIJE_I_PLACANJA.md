@@ -282,6 +282,8 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Otkazivanje / istek rezervacije: `brPrijavljenih -= brOsoba`, `POPUNJEN` -> `POTVRDJEN` (ili `OTVOREN` ako padne ispod minimuma pre `rokZaMin`).
 - Kapacitet zauzimaju aktivni statusi: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`.
 - Termin sa prijavama se ne pomera; vlasnik ga otkazuje (`OTKAZAN` -> sve rezervacije `OTKAZANO_VLASNIK`, puni refund) i pravi novi.
+- `rokZaMin` (`minGuestsDeadline`) zadaje vlasnik pri pravljenju termina kao broj dana pre pocetka (0..30): rok je ponoc (Europe/Belgrade) na pocetku dana `datumOd - brojDana`. Termin pocinje najranije sutra, a rok mora biti u buducnosti.
+- Termin bez prijava se brise; ako ima samo stare (otkazane/istekle) rezervacije, postaje `OTKAZAN` umesto brisanja.
 
 ## 6) Transakcione granice
 
@@ -335,7 +337,7 @@ Hard delete (red se stvarno brise):
 
 | Entitet | Napomena |
 |---|---|
-| `UslugaSlika` | brise se i fajl iz storage-a |
+| `UslugaSlika` | brise se i fajl iz storage-a (Cloudinary, preko `ImageStorage.delete`), posle commita brisanja reda |
 | `Karakteristika` | samo admin; ako je u upotrebi -> `409` ili brisanje veza u `usluga_karakteristika` |
 | `OmiljenaUsluga` | red postoji ili ne postoji, `UNIQUE (korisnik_id, usluga_id)`; dodavanje idempotentno |
 | `NedostupanPeriod` | |
@@ -381,6 +383,10 @@ Sistem samo cuva podatke na osnovu kojih admin odlucuje:
 Kasnije (v2), ako se uvede automatika: pravila penala na nivou platforme (npr. otkazivanje < 7 dana pre dolaska -> X% vrednosti rezervacije), entitet `Penal` (vlasnik, rezervacija, iznos, status) i naplata preko Stripe Connect. Pre toga mora biti resen tok novca platforma <-> vlasnik.
 
 ## 10) DTO sloj i API granice
+
+- Slike usluga se cuvaju na Cloudinary-ju (besplatni plan); u bazi samo `url` i `publicId`. Upload ide preko backenda (frontend nikad nema API secret), van DB transakcije. Skladiste je iza interfejsa `ImageStorage`.
+- Slike i karakteristike vlasnik menja direktno u svakom statusu usluge, bez zahteva za izmenu.
+- Gosti vide samo odobrene slike. Slika dodata javnoj usluzi (`ODOBRENA`, `PAUZIRANA_VLASNIK`) ceka pregled admina; slike usluge koja jos nije javna pregledaju se zajedno sa uslugom. Odbijena slika se brise iz storage-a, red ostaje sa razlogom za vlasnika. Admin moze i naknadno da obrise bilo koju sliku.
 
 - Entitete ne izlagati direktno.
 - Koristiti `Request DTO` + validaciju.

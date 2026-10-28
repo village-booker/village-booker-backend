@@ -1,17 +1,21 @@
 package com.villagebooker.dto.listing;
 
-import com.villagebooker.enums.CancellationPolicy;
-import com.villagebooker.enums.ListingStatus;
-import com.villagebooker.enums.ListingType;
-import com.villagebooker.enums.PaymentMethod;
-import com.villagebooker.enums.TourDifficulty;
+import com.villagebooker.dto.feature.FeatureResponse;
+import com.villagebooker.enums.listing.CancellationPolicy;
+import com.villagebooker.enums.listing.ListingStatus;
+import com.villagebooker.enums.listing.ListingType;
+import com.villagebooker.enums.payment.PaymentMethod;
+import com.villagebooker.enums.listing.TourDifficulty;
 import com.villagebooker.model.Accommodation;
 import com.villagebooker.model.Listing;
 import com.villagebooker.model.Tour;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
 
 // Full listing. Exactly one of accommodation / tour is filled, matching type.
+// Reads images and features (lazy), so it is built inside a transaction.
 public record ListingResponse(
         Long id,
         ListingType type,
@@ -37,7 +41,10 @@ public record ListingResponse(
         BigDecimal rating,
         Integer reviewCount,
         AccommodationDetails accommodation,
-        TourDetails tour
+        TourDetails tour,
+        // ordered by sortOrder, the first one is the main image; the owner also sees PENDING / REJECTED ones
+        List<ListingImageResponse> images,
+        List<FeatureResponse> features
 ) {
 
     public record AccommodationDetails(
@@ -97,6 +104,14 @@ public record ListingResponse(
                 listing.getRating(),
                 listing.getReviewCount(),
                 accommodation,
-                tour);
+                tour,
+                listing.getImages().stream()
+                        .sorted(Comparator.comparing(i -> i.getSortOrder()))
+                        .map(ListingImageResponse::from)
+                        .toList(),
+                listing.getFeatures().stream()
+                        .sorted(Comparator.comparing(f -> f.getNameSr()))
+                        .map(FeatureResponse::from)
+                        .toList());
     }
 }

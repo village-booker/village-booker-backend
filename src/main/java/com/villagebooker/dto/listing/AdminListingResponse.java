@@ -3,7 +3,6 @@ package com.villagebooker.dto.listing;
 import com.villagebooker.model.Listing;
 import com.villagebooker.model.User;
 
-// what the admin sees when moderating: the listing plus who the host is
 public record AdminListingResponse(
         ListingResponse listing,
         Owner owner

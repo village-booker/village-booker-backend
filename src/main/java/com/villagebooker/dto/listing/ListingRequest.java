@@ -1,12 +1,12 @@
 package com.villagebooker.dto.listing;
 
-import com.villagebooker.enums.CancellationPolicy;
-import com.villagebooker.enums.PaymentMethod;
+import com.villagebooker.enums.listing.CancellationPolicy;
+import com.villagebooker.enums.payment.PaymentMethod;
 
 import java.math.BigDecimal;
 
 // Fields shared by accommodation and tour requests. The records stay flat (frontend sends one JSON object)
-// and implement this, so ListingService checks the shared business rules once.
+// and implement this, so ListingRequests checks the shared business rules once.
 public interface ListingRequest {
 
     String name();

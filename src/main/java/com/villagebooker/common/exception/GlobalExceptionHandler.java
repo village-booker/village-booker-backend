@@ -70,7 +70,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.UNAUTHORIZED, ErrorCode.AUTHENTICATION_REQUIRED, "Authentication failed.", request);
     }
 
-    // @PreAuthorize denied the call
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return problem(HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, "Access denied.", request);
@@ -125,6 +124,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             case 404 -> ErrorCode.ROUTE_NOT_FOUND;
             case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
             case 406, 415 -> ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+            case 413 -> ErrorCode.IMAGE_TOO_LARGE;
             default -> status.is5xxServerError() ? ErrorCode.INTERNAL_ERROR : ErrorCode.REQUEST_ERROR;
         };
     }

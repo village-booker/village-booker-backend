@@ -4,9 +4,12 @@ Platforma koja povezuje ljude iz grada sa seoskim domaćinstvima: smeštaj i tur
 
 Jezik: kod (klase, polja, tabele, kolone, komentari u kodu) je na engleskom. Spec, dokumentacija, commit poruke i razgovor su na srpskom (latinica). Rečnik srpski naziv -> engleski naziv je u sekciji 0 spec-a.
 
+Komentari u kodu samo tamo gde iz imena i koda nije jasno zašto je nešto urađeno baš tako (neočigledno pravilo iz spec-a, lock, rad van transakcije, namerno odstupanje od uobičajenog). Metode čije ime kaže šta rade (`findMine`, `approve`, `delete`...) se ne komentarišu, a komentar ne prepričava kod.
+
 ## Stack i pokretanje
 
 - Java 21, Spring Boot 4, Gradle, Spring Data JPA (Hibernate), Spring Security + JWT, PostgreSQL (Neon), Lombok.
+- Slike oglasa: Cloudinary (`com.cloudinary:cloudinary-http5`), besplatni plan. Ključevi `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` u `.env` (`app.cloudinary.*`); API key i secret nikad ne idu u frontend (frontend treba samo cloud name).
 - Tajne idu u `.env` u korenu repoa (napravi ga po uzoru na `.env.example`). `.env` se nikad ne commituje. `application.properties` sme da sadrži samo `${...}` reference.
 - Pokretanje: `./gradlew bootRun`. Testovi: `./gradlew test`. Pre push-a: `./gradlew build`.
 - Trenutno: `spring.jpa.hibernate.ddl-auto=update` i Flyway isključen. To je privremeno, za lokalni razvoj. Pre zajedničke baze prelazi se na Flyway `V1` migraciju + `ddl-auto=validate`. Ne dodavati migracije dok tim to ne dogovori.
@@ -20,17 +23,19 @@ Jezik: kod (klase, polja, tabele, kolone, komentari u kodu) je na engleskom. Spe
 
 ## Struktura
 
-Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
+Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`, `enums` i `dto` imaju iste podpakete po oblasti: `auth`, `user`, `listing` (oglasi, moderacija, zahtevi za izmenu, slike), `feature`, `tour` (termini tura), `booking`, `payment`, `review`, plus `common` za zajedničko. Nova klasa ide u svoj sloj i u podpaket svoje oblasti; nova oblast dobija isti podpaket u svakom sloju gde ima klasa.
 
-- `controller`: REST kontroleri (`AuthController`, `UserController`...).
-- `service`: poslovna logika i transakcije (`AuthService`, `UserService`...).
-- `dto`: request / response record-i, podeljeni po oblasti u podpakete (`dto.auth`, `dto.user`, kasnije `dto.listing`, `dto.booking`...).
-- `repo`: Spring Data repository-ji (`XxxRepo`).
-- `model`: JPA entiteti (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`). `enums`: enumi.
+- `controller`: REST kontroleri (`controller.listing.OwnerListingController`...); `controller.common.Paging` pretvara `?page=&size=` u `PageRequest` (najviše 100 po strani).
+- `service`: poslovna logika i transakcije (`service.listing.ChangeRequestService`...). Pomoćne klase oblasti su package-private u njenom paketu (`ListingFields`, `ListingRequests`); ono što koristi druga oblast je `public` (npr. `OwnerListingService.findOwn`, `checkOwner`).
+- `dto`: request / response record-i (`dto.listing`, `dto.tour`...); `dto.common.PageResponse` za liste sa paginacijom.
+- `repo`: Spring Data repository-ji (`repo.listing.ListingRepo`...). `FavoriteRepo` je u `repo.user` (omiljeni oglasi su lista korisnika).
+- `enums`: po oblasti (`enums.listing.ListingStatus`, `enums.payment.PaymentMethod`...).
+- `model`: JPA entiteti, bez podpaketa (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`).
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
-- `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`).
+- `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`, `CloudinaryProperties`).
+- `storage`: skladište slika iza interfejsa `ImageStorage` (`CloudinaryImageStorage`); servisi ne znaju za Cloudinary, pa se servis može zameniti jednom klasom. U testovima ga zamenjuje `FakeImageStorage` (`@Primary`, bez mreže).
 - `common`: `bank` (`BankAccountNumber`), `exception` (`ErrorCode`, `ApiException` i njene podklase `NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
-- Testovi prate isti raspored paketa.
+- Testovi prate isti raspored paketa (`controller.listing.ChangeRequestFlowTest`...); zajednički pomoćnik za testove oglasa je `controller.listing.ListingTestSupport`.
 
 ## Konvencije modela
 
@@ -81,6 +86,15 @@ Podela po slojevima (ne po feature-ima). Nove klase idu u odgovarajući sloj:
 - Pravila koja važe za sve oglase: `minGuests <= maxGuests`; smeštaj još `minGuests <= baseGuests <= maxGuests`. Otkazivanje: `FREE` traži `freeCancellationDays` i ne sme imati `refundPercentage`; `PARTIAL` traži `refundPercentage`, a `freeCancellationDays` je opcion; `NON_REFUNDABLE` nema ni jedno ni drugo. Kapara (`depositPercentage > 0`) nije dozvoljena uz `ON_SITE`.
 - `ListingResponse` ima `accommodation` ili `tour` (tačno jedno popunjeno, prema `type`). `ListingSummaryResponse.price` je cena noćenja (smeštaj) ili cena po osobi (tura).
 - `district` je za sada slobodan tekst (šifarnik je otvorena odluka).
+
+## Karakteristike, slike, termini tura
+
+- Karakteristike (`Feature`): katalog vodi admin (`/api/admin/features`, POST/PUT/DELETE), čitanje `GET /api/features` je javno. Naziv se čuva na oba jezika (`nameSr`, `nameEn`), jer admin dodaje karakteristike u radu aplikacije pa ih frontend ne može prevesti. Nazivi su jedinstveni bez obzira na velika/mala slova; karakteristika u upotrebi se ne briše (409 `FEATURE_IN_USE`). Domaćin: `PUT /api/owner/listings/{id}/features` sa `featureIds` (zamenjuje ceo skup).
+- Slike (`ListingImage`): `POST /api/owner/listings/{id}/images` (multipart, deo `file`), `PUT /{id}/images/order`, `DELETE /{id}/images/{imageId}`; admin `DELETE /api/admin/listings/{id}/images/{imageId}`. Samo JPEG/PNG/WebP (proverava se po prvim bajtovima fajla, ne po `Content-Type`), najviše 5 MB i 15 slika po oglasu. `sortOrder` 0 je glavna slika; slike koje nisu `REJECTED` su uvek 0..n-1, odbijene posle njih. Glavna slika za goste je prva `APPROVED`. U bazi se čuvaju `url` i `publicId` (za brisanje iz Cloudinary-ja).
+- Upload traje sekundama, pa ide van transakcije (`ListingImageService` sa `TransactionTemplate`): kratka transakcija za proveru, upload, kratka transakcija sa lockom oglasa za upis. Ako upis ne uspe, fajl se briše iz skladišta; fajl se briše iz skladišta tek posle brisanja reda.
+- Karakteristike i slike domaćin menja direktno u svakom statusu, bez zahteva za izmenu (karakteristike su iz admin kataloga). Zahtevi za izmenu važe samo za polja iz `ListingFields`.
+- Pregled slika (`ListingImage.status`, enum `ImageStatus`): gosti vide samo `APPROVED` slike. Slika dodata javnom oglasu (`APPROVED`, `PAUSED_BY_OWNER`) je `PENDING` dok je admin ne pregleda (`/api/admin/images`: `GET ?status=PENDING`, `POST /{id}/approve`, `POST /{id}/reject` sa `reason`); slike oglasa koji još nije javan su odmah `APPROVED`, jer ih admin vidi pri pregledu samog oglasa. Odbijena slika se briše iz skladišta, a red ostaje (`REJECTED` + `rejectionReason`) da domaćin vidi razlog; ne računa se u limit od 15 i nije deo redosleda (ide na kraj), domaćin je briše iz liste. Admin može i da obriše bilo koju sliku (`DELETE /api/admin/listings/{id}/images/{imageId}`).
+- Termini ture (`/api/owner/listings/tours/{tourId}/dates`): `POST` sa `startDate` i `minGuestsDeadlineDaysBefore` (0..30), `GET` (budući termini), `DELETE /{dateId}`. `endDate = startDate + durationDays - 1`; `minGuestsDeadline` = ponoć (Europe/Belgrade) na početku dana `startDate - minGuestsDeadlineDaysBefore`. Termin počinje najranije sutra, rok mora biti u budućnosti, jedna tura nema dva neotkazana termina sa istim početkom. Brisanje samo bez gostiju (`bookedCount > 0` -> 409 `TOUR_DATE_HAS_BOOKINGS`); ako termin ima stare (otkazane/istekle) rezervacije, ne briše se nego postaje `CANCELLED`.
 
 ## Rezervacije (sažetak spec-a)
 

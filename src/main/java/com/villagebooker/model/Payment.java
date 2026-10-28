@@ -1,8 +1,8 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.PaymentChannel;
-import com.villagebooker.enums.PaymentStatus;
-import com.villagebooker.enums.PaymentType;
+import com.villagebooker.enums.payment.PaymentChannel;
+import com.villagebooker.enums.payment.PaymentStatus;
+import com.villagebooker.enums.payment.PaymentType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

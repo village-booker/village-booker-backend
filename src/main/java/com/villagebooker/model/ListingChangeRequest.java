@@ -1,6 +1,6 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.ChangeRequestStatus;
+import com.villagebooker.enums.listing.ChangeRequestStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

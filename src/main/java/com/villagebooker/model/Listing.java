@@ -1,12 +1,13 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.CancellationPolicy;
-import com.villagebooker.enums.ListingStatus;
-import com.villagebooker.enums.PaymentMethod;
+import com.villagebooker.enums.listing.CancellationPolicy;
+import com.villagebooker.enums.listing.ListingStatus;
+import com.villagebooker.enums.payment.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -110,7 +111,8 @@ public abstract class Listing {
     private User owner;
 
     @OneToMany(mappedBy = "listing", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ListingImage> images;
+    @OrderBy("sortOrder ASC")
+    private List<ListingImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "listing", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UnavailablePeriod> unavailablePeriods;

@@ -1,8 +1,8 @@
 package com.villagebooker.dto.listing;
 
-import com.villagebooker.enums.TourDifficulty;
-import com.villagebooker.enums.CancellationPolicy;
-import com.villagebooker.enums.PaymentMethod;
+import com.villagebooker.enums.listing.TourDifficulty;
+import com.villagebooker.enums.listing.CancellationPolicy;
+import com.villagebooker.enums.payment.PaymentMethod;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -29,7 +29,7 @@ public record TourRequest(
         @NotNull @DecimalMin("-180") @DecimalMax("180") @Digits(integer = 3, fraction = 6) BigDecimal longitude,
         @NotNull CancellationPolicy cancellationPolicy,
         @NotNull PaymentMethod paymentMethod,
-        // percentages 0..100; which of them are required depends on the policy / payment method (ListingService)
+        // percentages 0..100; which of them are required depends on the policy / payment method (ListingRequests)
         @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal depositPercentage,
         @Min(0) @Max(365) Integer freeCancellationDays,
         @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal refundPercentage,

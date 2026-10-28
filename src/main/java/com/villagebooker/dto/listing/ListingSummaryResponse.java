@@ -1,7 +1,7 @@
 package com.villagebooker.dto.listing;
 
-import com.villagebooker.enums.ListingStatus;
-import com.villagebooker.enums.ListingType;
+import com.villagebooker.enums.listing.ListingStatus;
+import com.villagebooker.enums.listing.ListingType;
 import com.villagebooker.model.Accommodation;
 import com.villagebooker.model.Listing;
 import com.villagebooker.model.Tour;

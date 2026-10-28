@@ -1,8 +1,8 @@
 package com.villagebooker.model;
 
-import com.villagebooker.enums.BookingStatus;
-import com.villagebooker.enums.CancellationPolicy;
-import com.villagebooker.enums.PaymentMethod;
+import com.villagebooker.enums.booking.BookingStatus;
+import com.villagebooker.enums.listing.CancellationPolicy;
+import com.villagebooker.enums.payment.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
