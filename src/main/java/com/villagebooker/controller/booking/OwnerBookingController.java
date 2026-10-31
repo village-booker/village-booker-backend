@@ -2,7 +2,9 @@ package com.villagebooker.controller.booking;
 
 import com.villagebooker.controller.common.Paging;
 import com.villagebooker.dto.booking.BookingRejectionRequest;
+import com.villagebooker.dto.booking.CancellationResponse;
 import com.villagebooker.dto.booking.OwnerBookingResponse;
+import com.villagebooker.dto.booking.OwnerCancellationRequest;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.security.AuthUser;
@@ -53,5 +55,11 @@ public class OwnerBookingController {
     public OwnerBookingResponse reject(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
                                        @Valid @RequestBody(required = false) BookingRejectionRequest request) {
         return ownerBookingService.reject(authUser.id(), id, request);
+    }
+
+    @PostMapping("/{id}/cancel")
+    public CancellationResponse cancel(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
+                                       @Valid @RequestBody OwnerCancellationRequest request) {
+        return ownerBookingService.cancel(authUser.id(), id, request);
     }
 }

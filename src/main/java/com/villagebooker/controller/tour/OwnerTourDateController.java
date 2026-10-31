@@ -1,5 +1,6 @@
 package com.villagebooker.controller.tour;
 
+import com.villagebooker.dto.booking.OwnerCancellationRequest;
 import com.villagebooker.dto.tour.TourDateRequest;
 import com.villagebooker.dto.tour.TourDateResponse;
 import com.villagebooker.security.AuthUser;
@@ -38,6 +39,13 @@ public class OwnerTourDateController {
     @GetMapping
     public List<TourDateResponse> findUpcoming(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long tourId) {
         return tourDateService.findUpcoming(authUser.id(), tourId);
+    }
+
+    // the date and all its bookings, guests get everything back
+    @PostMapping("/{dateId}/cancel")
+    public TourDateResponse cancel(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long tourId,
+                                   @PathVariable Long dateId, @Valid @RequestBody OwnerCancellationRequest request) {
+        return tourDateService.cancel(authUser.id(), tourId, dateId, request);
     }
 
     @DeleteMapping("/{dateId}")

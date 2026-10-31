@@ -6,6 +6,7 @@ import com.villagebooker.common.time.AppTime;
 import com.villagebooker.config.TermsProperties;
 import com.villagebooker.controller.listing.ListingTestSupport;
 import com.villagebooker.dto.booking.AccommodationBookingRequest;
+import com.villagebooker.dto.booking.OwnerCancellationRequest;
 import com.villagebooker.dto.booking.TourBookingRequest;
 import com.villagebooker.dto.listing.UnavailablePeriodRequest;
 import com.villagebooker.enums.listing.ListingStatus;
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -67,6 +70,9 @@ class BookingConcurrencyTest {
 
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private OwnerBookingService ownerBookingService;
 
     @Autowired
     private UnavailablePeriodService unavailablePeriodService;
@@ -149,7 +155,28 @@ class BookingConcurrencyTest {
                 .isEqualTo(10);
     }
 
-    // starts all tasks at the same moment; true = succeeded, false = rejected with 409
+    @Test
+    void guestAndHostCancellingTheSameBookingReleaseThePlacesOnce() throws Exception {
+        Long tourId = approved(support.createTour(owner));
+        Long ownerId = listingRepo.findById(tourId).orElseThrow().getOwner().getId();
+        Long dateId = createDate(tourId, AppTime.today(clock).plusDays(20));
+        Long guestId = guest();
+        Long bookingId = bookingService.createTour(guestId, new TourBookingRequest(dateId, 3, null)).id();
+        bookingService.createTour(guest(), new TourBookingRequest(dateId, 2, null));
+
+        List<Boolean> results = race(
+                () -> bookingService.cancel(guestId, bookingId, null),
+                () -> ownerBookingService.cancel(ownerId, bookingId, new OwnerCancellationRequest("Nevreme")));
+
+        assertThat(results).containsExactlyInAnyOrder(true, false);
+        assertThat(jdbc.queryForObject("select booked_count from tour_date where id = ?", Integer.class, dateId))
+                .isEqualTo(2);
+        assertThat(jdbc.queryForObject("select status from booking where id = ?", String.class, bookingId))
+                .isIn("CANCELLED_BY_GUEST", "CANCELLED_BY_OWNER");
+    }
+
+    // Starts all tasks at the same moment; true = succeeded, false = rejected: 409 from a check, or the
+    // @Version / CHECK of the row that the other transaction changed first (also a 409 for the client).
     @SafeVarargs
     private static List<Boolean> race(Callable<Object>... tasks) throws Exception {
         CountDownLatch start = new CountDownLatch(1);
@@ -162,7 +189,8 @@ class BookingConcurrencyTest {
                     try {
                         task.call();
                         return true;
-                    } catch (ConflictException e) {
+                    } catch (ConflictException | OptimisticLockingFailureException
+                             | DataIntegrityViolationException e) {
                         return false;
                     }
                 }));

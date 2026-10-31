@@ -41,6 +41,17 @@ public record BookingTestSupport(MockMvc mvc) {
         return depositJson().replace("\"minGuests\"", "\"requiresOwnerApproval\": true, \"minGuests\"");
     }
 
+    // accommodationJson() / tourJson() with other cancellation and payment terms, e.g.
+    // "\"cancellationPolicy\": \"PARTIAL\", \"refundPercentage\": 40, \"paymentMethod\": \"ON_SITE\""
+    public static String withTerms(String listingJson, String terms) {
+        return listingJson.replace(DEFAULT_TERMS, terms);
+    }
+
+    // simulated deposit payment (app.payments.simulated=true)
+    public ResultActions pay(String token, Long bookingId) throws Exception {
+        return mvc.perform(post(BOOKINGS + "/" + bookingId + "/pay").header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    }
+
     public ResultActions bookAccommodation(String token, Long listingId, LocalDate arrival, LocalDate departure,
                                            int guests) throws Exception {
         return mvc.perform(post(BOOKINGS + "/accommodations")

@@ -6,7 +6,9 @@ import com.villagebooker.common.exception.ErrorCode;
 import com.villagebooker.common.exception.NotFoundException;
 import com.villagebooker.common.time.AppTime;
 import com.villagebooker.dto.booking.AccommodationBookingRequest;
+import com.villagebooker.dto.booking.BookingCancellationRequest;
 import com.villagebooker.dto.booking.BookingResponse;
+import com.villagebooker.dto.booking.CancellationResponse;
 import com.villagebooker.dto.booking.TourBookingRequest;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.enums.booking.BookingStatus;
@@ -49,6 +51,7 @@ public class BookingService {
     private final TourDateRepo tourDateRepo;
     private final UserRepo userRepo;
     private final BookingStatusChanger statusChanger;
+    private final BookingCanceller canceller;
     private final Clock clock;
 
     @Transactional
@@ -161,6 +164,18 @@ public class BookingService {
     @Transactional(readOnly = true)
     public BookingResponse getMine(Long guestId, Long bookingId) {
         return BookingResponse.from(findOwn(guestId, bookingId));
+    }
+
+    // what the guest would get back if they cancelled now; nothing changes
+    @Transactional(readOnly = true)
+    public CancellationResponse previewCancellation(Long guestId, Long bookingId) {
+        return canceller.preview(findOwn(guestId, bookingId), BookingStatus.CANCELLED_BY_GUEST);
+    }
+
+    @Transactional
+    public CancellationResponse cancel(Long guestId, Long bookingId, BookingCancellationRequest request) {
+        return canceller.cancel(findOwn(guestId, bookingId), BookingStatus.CANCELLED_BY_GUEST,
+                request == null ? null : request.reason());
     }
 
     // another guest's booking is 404, not 403: its existence is nobody else's business

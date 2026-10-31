@@ -1,21 +1,18 @@
 package com.villagebooker.service.booking;
 
 import com.villagebooker.dto.booking.BookingRejectionRequest;
+import com.villagebooker.dto.booking.CancellationResponse;
 import com.villagebooker.dto.booking.OwnerBookingResponse;
+import com.villagebooker.dto.booking.OwnerCancellationRequest;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.model.Booking;
-import com.villagebooker.model.TourDate;
 import com.villagebooker.repo.booking.BookingRepo;
-import com.villagebooker.repo.tour.TourDateRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Clock;
-import java.time.Instant;
 
 // Bookings of the host's listings. A booking of another host's listing is 404, like another guest's booking.
 @Service
@@ -23,9 +20,8 @@ import java.time.Instant;
 public class OwnerBookingService {
 
     private final BookingRepo bookingRepo;
-    private final TourDateRepo tourDateRepo;
     private final BookingStatusChanger statusChanger;
-    private final Clock clock;
+    private final BookingCanceller canceller;
 
     @Transactional(readOnly = true)
     public PageResponse<OwnerBookingResponse> findMine(Long ownerId, BookingStatus status, Long listingId,
@@ -63,15 +59,15 @@ public class OwnerBookingService {
         String reason = request == null ? null : request.reason();
         booking.setCancellationReason(reason == null || reason.isBlank() ? null : reason.trim());
         if (booking.getTourDate() != null) {
-            releasePlaces(booking);
+            canceller.releasePlaces(booking);
         }
         return OwnerBookingResponse.from(booking);
     }
 
-    // the tour date is only a lazy proxy until here, so the locking query loads its current bookedCount
-    private void releasePlaces(Booking booking) {
-        TourDate date = tourDateRepo.findByIdForUpdate(booking.getTourDate().getId()).orElseThrow();
-        TourDateSeats.release(date, booking.getGuestCount(), Instant.now(clock));
+    // spec 9.2: the guest gets back everything paid, whatever the cancellation policy
+    @Transactional
+    public CancellationResponse cancel(Long ownerId, Long bookingId, OwnerCancellationRequest request) {
+        return canceller.cancel(findOwn(ownerId, bookingId), BookingStatus.CANCELLED_BY_OWNER, request.reason());
     }
 
     private Booking findOwn(Long ownerId, Long bookingId) {

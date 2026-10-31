@@ -429,7 +429,7 @@ Sledece:
 4. Rezervacije: kreiranje (lock + preklapanje / kapacitet), odobravanje, otkazivanje, refund pravila (sekcije 1.1, 3, 5, 9).
    - [x] kreiranje (smestaj, tura), snimak uslova, pocetni status
    - [x] prikaz za gosta i domacina, domacin odobrava / odbija, simulirana uplata kapare (`app.payments.simulated`, dok se ne izabere provajder)
-   - [ ] otkazivanje (gost, domacin, ceo termin ture) i refund
+   - [x] otkazivanje (gost, domacin, ceo termin ture) i refund; otkazuje se samo pre dana pocetka (`BOOKING_ALREADY_STARTED`)
    - [ ] pauziranje i brisanje usluge (9.3)
 5. Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).

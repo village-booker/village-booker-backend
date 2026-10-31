@@ -2,7 +2,9 @@ package com.villagebooker.controller.booking;
 
 import com.villagebooker.controller.common.Paging;
 import com.villagebooker.dto.booking.AccommodationBookingRequest;
+import com.villagebooker.dto.booking.BookingCancellationRequest;
 import com.villagebooker.dto.booking.BookingResponse;
+import com.villagebooker.dto.booking.CancellationResponse;
 import com.villagebooker.dto.booking.TourBookingRequest;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.security.AuthUser;
@@ -55,5 +57,17 @@ public class BookingController {
     @GetMapping("/{id}")
     public BookingResponse getMine(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
         return bookingService.getMine(authUser.id(), id);
+    }
+
+    // preview: how much would come back if the guest cancelled now
+    @GetMapping("/{id}/cancellation")
+    public CancellationResponse previewCancellation(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
+        return bookingService.previewCancellation(authUser.id(), id);
+    }
+
+    @PostMapping("/{id}/cancel")
+    public CancellationResponse cancel(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
+                                       @Valid @RequestBody(required = false) BookingCancellationRequest request) {
+        return bookingService.cancel(authUser.id(), id, request);
     }
 }
