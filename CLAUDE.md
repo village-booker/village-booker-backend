@@ -32,7 +32,7 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - `enums`: po oblasti (`enums.listing.ListingStatus`, `enums.payment.PaymentMethod`...).
 - `model`: JPA entiteti, bez podpaketa (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`).
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
-- `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`, `CloudinaryProperties`).
+- `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`, `CloudinaryProperties`, `BookingProperties`).
 - `storage`: skladište slika iza interfejsa `ImageStorage` (`CloudinaryImageStorage`); servisi ne znaju za Cloudinary, pa se servis može zameniti jednom klasom. U testovima ga zamenjuje `FakeImageStorage` (`@Primary`, bez mreže).
 - `common`: `bank` (`BankAccountNumber`), `exception` (`ErrorCode`, `ApiException` i njene podklase `NotFoundException`, `ConflictException`, `BadRequestException`, `ForbiddenException`, `GlobalExceptionHandler`) i `time` (`AppTime`, `Clock` bean).
 - Testovi prate isti raspored paketa (`controller.listing.ChangeRequestFlowTest`...); zajednički pomoćnik za testove oglasa je `controller.listing.ListingTestSupport`.

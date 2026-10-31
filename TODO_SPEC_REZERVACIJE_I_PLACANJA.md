@@ -221,7 +221,7 @@ Polja:
 - `nacin` (`NacinUplate`: `ONLINE`, `NA_LICU_MESTA`) - jedna uplata nikad nije `KOMBINOVANO`; `KOMBINOVANO` postoji samo na `Usluga`/`Rezervacija` (`NacinPlacanja`)
 - `status` (`StatusPlacanja`)
 - `iznos` (`BigDecimal`, `CHECK iznos > 0`)
-- `refundIznos` (`BigDecimal`) - **jos nije u modelu**, dodati uz refund logiku
+- `refundIznos` (`refundAmount`, `BigDecimal`, podrazumevano `0`, `CHECK 0 <= refundIznos <= iznos`)
 - `stripePaymentId` (Stripe PaymentIntent ID)
 - `stripeRefundId` (poslednji refund ID ili drugi dogovoreni audit model)
 
@@ -308,8 +308,8 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 
 ## 8) Timeout mehanizam
 
-- `CEKA_POTVRDU_VLASNIKA -> ISTEKLO` nakon `12h`.
-- `CEKA_PLACANJE -> ISTEKLO` nakon `15m`.
+- `CEKA_POTVRDU_VLASNIKA -> ISTEKLO` nakon `24h` (`app.booking.owner-approval-timeout`).
+- `CEKA_PLACANJE -> ISTEKLO` nakon `15m` (`app.booking.payment-timeout`).
 - Pri svakom prelasku u status koji moze da istekne servis postavlja `Rezervacija.isticeU = now + timeout`; pri izlasku iz njega `isticeU = null`.
 - Scheduler bira `WHERE status IN (...) AND istice_u < now()` (indeks `idx_rezervacija_status_istice`) i menja samo status.
 - Smestaj: rezervisani termini se automatski oslobadjaju jer overlap blokira samo aktivne statuse.

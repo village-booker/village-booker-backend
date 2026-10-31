@@ -21,7 +21,8 @@ import java.time.Instant;
                 @Index(name = "idx_payment_booking", columnList = "booking_id")
         },
         check = {
-                @CheckConstraint(name = "chk_payment_amount", constraint = "amount > 0")
+                @CheckConstraint(name = "chk_payment_amount", constraint = "amount > 0"),
+                @CheckConstraint(name = "chk_payment_refund_amount", constraint = "refund_amount BETWEEN 0 AND amount")
         })
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,6 +35,10 @@ public class Payment {
 
     @Column(name = "amount", precision = 19, scale = 2, nullable = false)
     private BigDecimal amount;
+
+    // 0 = not refunded, < amount = partial refund, = amount = full refund (status REFUNDED in both cases)
+    @Column(name = "refund_amount", precision = 19, scale = 2, nullable = false)
+    private BigDecimal refundAmount = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
