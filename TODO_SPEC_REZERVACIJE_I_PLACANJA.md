@@ -422,6 +422,7 @@ Zavrseno:
 - [x] 1. Autentikacija: registracija, login, JWT filter, uloge (`USER`, `OWNER`, `ADMIN`), postani domacin, jezik.
 - [x] 2. Usluge: vlasnik pravi smestaj / turu (slike, karakteristike, termini ture), admin odobrava, zahtevi za izmenu. Ostalo: pauziranje i brisanje usluge (9.3), radi se uz rezervacije.
 - [x] 3. Pretraga i prikaz za goste (`ListingRepo` + `Specification`).
+- [x] Nedostupni periodi (deo koraka 7): vlasnik blokira noci smestaja, ne preklapa se sa aktivnom rezervacijom, pod lockom usluge.
 
 Sledece:
 

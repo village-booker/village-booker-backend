@@ -73,6 +73,10 @@ public enum ErrorCode {
     TOUR_DATE_DEADLINE_PASSED,
     TOUR_DATE_HAS_BOOKINGS,
 
+    // unavailable periods (owner blocks nights)
+    UNAVAILABLE_PERIOD_NOT_FOUND,
+    PERIOD_OVERLAPS_BOOKING,
+
     // public search
     DATE_RANGE_INVALID,
     PRICE_FILTER_NEEDS_TYPE,

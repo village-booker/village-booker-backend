@@ -12,6 +12,8 @@ public interface UnavailablePeriodRepo extends JpaRepository<UnavailablePeriod, 
 
     List<UnavailablePeriod> findByListingIdOrderByStartDate(Long listingId);
 
+    List<UnavailablePeriod> findByListingIdAndEndDateGreaterThanEqualOrderByStartDate(Long listingId, LocalDate date);
+
     @Query("""
             select p from UnavailablePeriod p
             where p.listing.id = :listingId

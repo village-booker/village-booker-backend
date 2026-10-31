@@ -96,6 +96,12 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - Pregled slika (`ListingImage.status`, enum `ImageStatus`): gosti vide samo `APPROVED` slike. Slika dodata javnom oglasu (`APPROVED`, `PAUSED_BY_OWNER`) je `PENDING` dok je admin ne pregleda (`/api/admin/images`: `GET ?status=PENDING`, `POST /{id}/approve`, `POST /{id}/reject` sa `reason`); slike oglasa koji još nije javan su odmah `APPROVED`, jer ih admin vidi pri pregledu samog oglasa. Odbijena slika se briše iz skladišta, a red ostaje (`REJECTED` + `rejectionReason`) da domaćin vidi razlog; ne računa se u limit od 15 i nije deo redosleda (ide na kraj), domaćin je briše iz liste. Admin može i da obriše bilo koju sliku (`DELETE /api/admin/listings/{id}/images/{imageId}`).
 - Termini ture (`/api/owner/listings/tours/{tourId}/dates`): `POST` sa `startDate` i `minGuestsDeadlineDaysBefore` (0..30), `GET` (budući termini), `DELETE /{dateId}`. `endDate = startDate + durationDays - 1`; `minGuestsDeadline` = ponoć (Europe/Belgrade) na početku dana `startDate - minGuestsDeadlineDaysBefore`. Termin počinje najranije sutra, rok mora biti u budućnosti, jedna tura nema dva neotkazana termina sa istim početkom. Brisanje samo bez gostiju (`bookedCount > 0` -> 409 `TOUR_DATE_HAS_BOOKINGS`); ako termin ima stare (otkazane/istekle) rezervacije, ne briše se nego postaje `CANCELLED`.
 
+## Nedostupni periodi
+
+- Domaćin blokira noći smeštaja (`OwnerUnavailablePeriodController`, `/api/owner/listings/{listingId}/unavailable-periods`): `POST` sa `startDate`, `endDate` (zatvoren interval noći) i opcionim `reason` (vidi ga samo domaćin), `GET` (periodi koji nisu prošli), `DELETE /{periodId}`. Samo smeštaj; od danas do najviše 365 dana unapred.
+- Blokada ne sme da se preklopi sa aktivnom rezervacijom (409 `PERIOD_OVERLAPS_BOOKING`); provera je pod istim lockom oglasa kao kreiranje rezervacije (spec 5.0). Preklapanje sa drugom blokadom je dozvoljeno.
+- Pretraga i kalendar za goste računaju blokirane noći kao zauzete.
+
 ## Pretraga i prikaz za goste
 
 - Javno, bez tokena (`PublicListingController`, `SecurityConfig`): `GET /api/listings` (pretraga), `GET /api/listings/{id}` (stranica oglasa), `GET /api/listings/{id}/availability?from=&to=` (kalendar smeštaja, podrazumevano godinu dana).
