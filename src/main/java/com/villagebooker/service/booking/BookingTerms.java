@@ -3,7 +3,6 @@ package com.villagebooker.service.booking;
 import com.villagebooker.common.time.AppTime;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.enums.listing.CancellationPolicy;
-import com.villagebooker.enums.payment.PaymentMethod;
 import com.villagebooker.model.Booking;
 import com.villagebooker.model.Listing;
 
@@ -37,18 +36,15 @@ final class BookingTerms {
         return AppTime.startOfDay(startDate.minusDays(listing.getFreeCancellationDays()));
     }
 
-    // spec 1: deposit flow only for online payment with a percentage above 0
-    static boolean hasDeposit(Booking booking) {
-        return booking.getPaymentMethod() != PaymentMethod.ON_SITE
-                && booking.getDepositPercentage() != null
-                && booking.getDepositPercentage().signum() > 0;
-    }
-
     // spec 3: manual approval first; then the deposit, if there is one; otherwise confirmed right away
     static BookingStatus initialStatus(Listing listing, Booking booking) {
         if (listing.isRequiresOwnerApproval()) {
             return BookingStatus.AWAITING_OWNER_APPROVAL;
         }
-        return hasDeposit(booking) ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED;
+        return afterApproval(booking);
+    }
+
+    static BookingStatus afterApproval(Booking booking) {
+        return booking.hasDeposit() ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED;
     }
 }

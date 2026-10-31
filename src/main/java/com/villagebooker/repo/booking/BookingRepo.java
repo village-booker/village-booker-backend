@@ -5,7 +5,9 @@ import com.villagebooker.model.Booking;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,8 +15,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
-public interface BookingRepo extends JpaRepository<Booking, Long> {
+// JpaSpecificationExecutor: the owner's list with optional filters (status, listing)
+public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificationExecutor<Booking> {
 
     // listing (and guest) loaded in the same query, otherwise mapping to DTO makes N+1 queries
     @EntityGraph(attributePaths = "listing")
@@ -22,6 +26,16 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
 
     @EntityGraph(attributePaths = {"listing", "guest"})
     Page<Booking> findByListingOwnerId(Long ownerId, Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {"listing", "guest"})
+    Page<Booking> findAll(Specification<Booking> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = "listing")
+    Optional<Booking> findByIdAndGuestId(Long id, Long guestId);
+
+    @EntityGraph(attributePaths = {"listing", "guest"})
+    Optional<Booking> findByIdAndListingOwnerId(Long id, Long ownerId);
 
     // accommodation availability: closed intervals [start, end] overlap (spec 1.2); tour bookings are excluded
     @Query("""

@@ -5,10 +5,10 @@ import com.villagebooker.common.exception.ConflictException;
 import com.villagebooker.common.exception.ErrorCode;
 import com.villagebooker.common.exception.NotFoundException;
 import com.villagebooker.common.time.AppTime;
-import com.villagebooker.config.BookingProperties;
 import com.villagebooker.dto.booking.AccommodationBookingRequest;
 import com.villagebooker.dto.booking.BookingResponse;
 import com.villagebooker.dto.booking.TourBookingRequest;
+import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.enums.listing.ListingStatus;
 import com.villagebooker.enums.tour.TourDateStatus;
@@ -26,11 +26,11 @@ import com.villagebooker.service.listing.ListingPrices;
 import com.villagebooker.service.listing.OwnerListingService;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +48,7 @@ public class BookingService {
     private final UnavailablePeriodRepo unavailablePeriodRepo;
     private final TourDateRepo tourDateRepo;
     private final UserRepo userRepo;
-    private final BookingProperties properties;
+    private final BookingStatusChanger statusChanger;
     private final Clock clock;
 
     @Transactional
@@ -100,7 +100,7 @@ public class BookingService {
                     "Only " + freePlaces + " places are left on this tour date.",
                     Map.of("freePlaces", freePlaces));
         }
-        takePlaces(date, tour, request.guestCount());
+        TourDateSeats.take(date, request.guestCount());
 
         Booking booking = newBooking(guestId, listing, request.guestCount(), request.note(),
                 date.getStartDate(), date.getEndDate());
@@ -136,17 +136,6 @@ public class BookingService {
         }
     }
 
-    // spec 5.1: the date is confirmed once the minimum is reached and full at the maximum
-    private static void takePlaces(TourDate date, Tour tour, int guestCount) {
-        int booked = date.getBookedCount() + guestCount;
-        date.setBookedCount(booked);
-        if (booked == tour.getMaxGuests()) {
-            date.setStatus(TourDateStatus.FULL);
-        } else if (booked >= tour.getMinGuests()) {
-            date.setStatus(TourDateStatus.CONFIRMED);
-        }
-    }
-
     private Booking newBooking(Long guestId, Listing listing, int guestCount, String note,
                                LocalDate start, LocalDate end) {
         Booking booking = new Booking();
@@ -160,15 +149,28 @@ public class BookingService {
     }
 
     private Booking save(Listing listing, Booking booking) {
-        BookingStatus status = BookingTerms.initialStatus(listing, booking);
-        booking.setStatus(status);
-        Instant now = Instant.now(clock);
-        booking.setExpiresAt(switch (status) {
-            case AWAITING_OWNER_APPROVAL -> now.plus(properties.ownerApprovalTimeout());
-            case AWAITING_PAYMENT -> now.plus(properties.paymentTimeout());
-            default -> null;
-        });
+        statusChanger.start(booking, BookingTerms.initialStatus(listing, booking));
         return bookingRepo.save(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<BookingResponse> findMine(Long guestId, Pageable pageable) {
+        return PageResponse.of(bookingRepo.findByGuestId(guestId, pageable), BookingResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public BookingResponse getMine(Long guestId, Long bookingId) {
+        return BookingResponse.from(findOwn(guestId, bookingId));
+    }
+
+    // another guest's booking is 404, not 403: its existence is nobody else's business
+    public Booking findOwn(Long guestId, Long bookingId) {
+        return bookingRepo.findByIdAndGuestId(bookingId, guestId)
+                .orElseThrow(() -> bookingNotFound(bookingId));
+    }
+
+    public static NotFoundException bookingNotFound(Long bookingId) {
+        return new NotFoundException(ErrorCode.BOOKING_NOT_FOUND, "Booking " + bookingId + " not found.");
     }
 
     private static NotFoundException tourDateNotFound(Long dateId) {

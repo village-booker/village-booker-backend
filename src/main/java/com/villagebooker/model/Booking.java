@@ -11,6 +11,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -115,5 +116,18 @@ public class Booking {
 
     public long getDayCount() {
         return ChronoUnit.DAYS.between(startDate, endDate) + 1;
+    }
+
+    // spec 1: deposit flow only for online payment with a percentage above 0
+    public boolean hasDeposit() {
+        return paymentMethod != PaymentMethod.ON_SITE && depositPercentage != null && depositPercentage.signum() > 0;
+    }
+
+    // null when the booking has no deposit
+    public BigDecimal getDepositAmount() {
+        if (!hasDeposit()) {
+            return null;
+        }
+        return totalPrice.multiply(depositPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 }

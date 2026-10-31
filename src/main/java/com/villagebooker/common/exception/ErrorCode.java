@@ -92,6 +92,7 @@ public enum ErrorCode {
     TOUR_DATE_NOT_BOOKABLE,
     TOUR_DATE_CAPACITY_EXCEEDED,
     BOOKING_STATUS_INVALID,
+    BOOKING_EXPIRED,
 
     // pausing and deleting a listing (spec 9.3)
     LISTING_NOT_PAUSABLE,

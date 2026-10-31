@@ -28,6 +28,7 @@ public record BookingResponse(
         Instant freeCancellationUntil,
         BigDecimal refundPercentage,
         BigDecimal depositPercentage,
+        BigDecimal depositAmount,
         PaymentMethod paymentMethod,
         String note,
         Instant expiresAt,
@@ -44,7 +45,7 @@ public record BookingResponse(
                 booking.getStartDate(), booking.getEndDate(), tour ? null : booking.getEndDate().plusDays(1),
                 booking.getGuestCount(), booking.getTotalPrice(), booking.getAmountDue(),
                 booking.getCancellationPolicy(), booking.getFreeCancellationUntil(), booking.getRefundPercentage(),
-                booking.getDepositPercentage(), booking.getPaymentMethod(), booking.getNote(),
+                booking.getDepositPercentage(), booking.getDepositAmount(), booking.getPaymentMethod(), booking.getNote(),
                 booking.getExpiresAt(), booking.getCreatedAt(), booking.getCancelledAt(),
                 booking.getCancellationReason());
     }
