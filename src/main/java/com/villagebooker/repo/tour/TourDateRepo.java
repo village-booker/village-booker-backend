@@ -21,6 +21,9 @@ public interface TourDateRepo extends JpaRepository<TourDate, Long> {
     @Query("select d from TourDate d where d.id = :id")
     Optional<TourDate> findByIdForUpdate(@Param("id") Long id);
 
+    @Query("select d.tour.id from TourDate d where d.id = :id")
+    Optional<Long> findTourIdById(@Param("id") Long id);
+
     // one tour has at most one non-cancelled date per start day
     boolean existsByTourIdAndStartDateAndStatusNot(Long tourId, LocalDate startDate, TourDateStatus status);
 

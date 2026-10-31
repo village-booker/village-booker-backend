@@ -263,7 +263,7 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 - Transakcija pod lockom je kratka: lock -> provera -> upis -> commit. **Nikad** unutar nje: slanje mejla, HTTP pozivi, Stripe (vidi 14).
 - Svaki tok koji menja zauzetost usluge mora da uzme lock; jedan tok bez locka rusi zastitu.
 - Kad se zakljucava vise redova, uvek isti redosled: prvo `Listing`, pa `TourDate` (inace deadlock).
-- Proveriti jednom u logu (`show-sql=true`) da Hibernate za JOINED nasledjivanje generise `FOR UPDATE OF` osnovne tabele.
+- Provereno u logu (Hibernate 7.2): za JOINED nasledjivanje nema `FOR UPDATE` u glavnom upitu, nego "follow-on locking": posle obicnog `select`-a ide poseban `select ... from listing where id in (?) for no key update` (i isto za `accommodation` / `tour`). Lock radi (`BookingConcurrencyTest`), ali samo ako oglas nije vec ucitan u istoj transakciji: `findByIdForUpdate` mora biti prvo ucitavanje oglasa.
 - `EXCLUDE` na `rezervacija` ostaje kao druga linija odbrane.
 - Integracioni test: paralelno rezervacija + nedostupan period za isti datum -> prolazi tacno jedno.
 

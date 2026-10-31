@@ -24,8 +24,8 @@ public record ListingTestSupport(MockMvc mvc, UserRepo userRepo, JwtService jwtS
     public static final String ADMIN_CHANGE_REQUESTS = "/api/admin/change-requests";
     public static final String ADMIN_IMAGES = "/api/admin/images";
 
-    // registers a new user and makes them a host; returns the OWNER token
-    public String ownerToken() throws Exception {
+    // registers a new user (a guest); returns the USER token
+    public String userToken() throws Exception {
         String registered = mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -34,8 +34,13 @@ public record ListingTestSupport(MockMvc mvc, UserRepo userRepo, JwtService jwtS
                                 """.formatted(UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(registered, "$.accessToken");
+    }
+
+    // registers a new user and makes them a host; returns the OWNER token
+    public String ownerToken() throws Exception {
         String body = mvc.perform(post("/api/users/me/become-host")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + JsonPath.read(registered, "$.accessToken"))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"bankAccount": "160-5100000123456-65", "acceptHostTerms": true}
@@ -60,20 +65,19 @@ public record ListingTestSupport(MockMvc mvc, UserRepo userRepo, JwtService jwtS
     }
 
     public Long createTour(String ownerToken) throws Exception {
-        String body = mvc.perform(post(OWNER + "/tours")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(tourJson()))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        return ((Number) JsonPath.read(body, "$.id")).longValue();
+        return create(ownerToken, "/tours", tourJson());
     }
 
     public Long createAccommodation(String ownerToken) throws Exception {
-        String body = mvc.perform(post(OWNER + "/accommodations")
+        return create(ownerToken, "/accommodations", accommodationJson());
+    }
+
+    // path "/accommodations" or "/tours" with a custom body (e.g. other booking terms)
+    public Long create(String ownerToken, String path, String json) throws Exception {
+        String body = mvc.perform(post(OWNER + path)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accommodationJson()))
+                        .content(json))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
