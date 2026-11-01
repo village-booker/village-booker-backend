@@ -33,9 +33,12 @@ public interface TourDateRepo extends JpaRepository<TourDate, Long> {
     List<TourDate> findByTourIdAndStatusInAndStartDateGreaterThanEqualOrderByStartDate(
             Long tourId, Collection<TourDateStatus> statuses, LocalDate from);
 
-    // scheduler: dates whose minimum deadline has passed (cancelled if bookedCount < minGuests)
-    List<TourDate> findByStatusAndMinGuestsDeadlineBefore(TourDateStatus status, Instant now);
+    // scheduler: OPEN dates whose minimum deadline has passed -> CANCELLED
+    @Query("select d.id from TourDate d where d.status = :status and d.minGuestsDeadline < :now order by d.id")
+    List<Long> findIdsPastDeadline(@Param("status") TourDateStatus status, @Param("now") Instant now);
 
     // scheduler: finished dates -> COMPLETED
-    List<TourDate> findByStatusInAndEndDateBefore(Collection<TourDateStatus> statuses, LocalDate today);
+    @Query("select d.id from TourDate d where d.status in :statuses and d.endDate < :today order by d.id")
+    List<Long> findIdsEndedBefore(@Param("statuses") Collection<TourDateStatus> statuses,
+                                  @Param("today") LocalDate today);
 }

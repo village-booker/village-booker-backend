@@ -67,10 +67,12 @@ public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificat
                                   @Param("statuses") Collection<BookingStatus> statuses);
 
     // scheduler: bookings whose expiresAt has passed (statuses = BookingStatus.EXPIRABLE)
-    List<Booking> findByStatusInAndExpiresAtBefore(Collection<BookingStatus> statuses, Instant now);
+    @Query("select b.id from Booking b where b.status in :statuses and b.expiresAt < :now order by b.id")
+    List<Long> findIdsToExpire(@Param("statuses") Collection<BookingStatus> statuses, @Param("now") Instant now);
 
     // scheduler: CONFIRMED bookings whose last day has passed -> COMPLETED
-    List<Booking> findByStatusAndEndDateBefore(BookingStatus status, LocalDate today);
+    @Query("select b.id from Booking b where b.status = :status and b.endDate < :today order by b.id")
+    List<Long> findIdsEndedBefore(@Param("status") BookingStatus status, @Param("today") LocalDate today);
 
     // any booking (also cancelled / expired) on a tour date: then the date is cancelled instead of deleted
     boolean existsByTourDateId(Long tourDateId);

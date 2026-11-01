@@ -213,7 +213,7 @@ class BookingCancellationFlowTest {
     void unpaidBookingsAreCancelledWithoutRefund() throws Exception {
         Long onSite = support.createAccommodation(owner);
         support.approveListing(admin, onSite).andExpect(status().isOk());
-        Long confirmed = bookings.book(guest, onSite, today.plusDays(10), today.plusDays(11), 2);
+        Long confirmed = bookings.bookApproved(guest, owner, onSite, today.plusDays(10), today.plusDays(11), 2);
         cancelAsGuest(guest, confirmed, null)
                 .andExpect(jsonPath("$.paidAmount").value(0))
                 .andExpect(jsonPath("$.refundAmount").value(0));
@@ -232,7 +232,10 @@ class BookingCancellationFlowTest {
     void startedBookingsAreNotCancelled() throws Exception {
         Long listing = support.createAccommodation(owner);
         support.approveListing(admin, listing).andExpect(status().isOk());
-        Long tonight = bookings.book(guest, listing, today, today.plusDays(2), 2);
+        Long tonight = bookings.bookApproved(guest, owner, listing, today.plusDays(1), today.plusDays(3), 2);
+        Booking booking = bookingRepo.findById(tonight).orElseThrow();
+        booking.setStartDate(today);
+        bookingRepo.saveAndFlush(booking);
 
         cancelAsGuest(guest, tonight, null)
                 .andExpect(status().isConflict())
@@ -275,6 +278,7 @@ class BookingCancellationFlowTest {
         Long dateId = bookings.createDate(owner, tourId, today.plusDays(20));
         // 2 * 3500 = 7000, deposit 2100
         Long paid = BookingTestSupport.idOf(bookings.bookTour(guest, dateId, 2).andExpect(status().isCreated()));
+        bookings.approve(owner, paid).andExpect(status().isOk());
         bookings.pay(guest, paid).andExpect(jsonPath("$.status").value("CONFIRMED"));
         Long unpaid = BookingTestSupport.idOf(bookings.bookTour(support.userToken(), dateId, 3).andExpect(status().isCreated()));
         String leaver = support.userToken();
@@ -323,9 +327,9 @@ class BookingCancellationFlowTest {
                 .andExpect(jsonPath("$.code").value("TOUR_DATE_IN_PAST"));
     }
 
-    // null terms = accommodationJson() with host approval
+    // null terms = accommodationJson()
     private Long accommodation(String terms) throws Exception {
-        String json = terms == null ? BookingTestSupport.manualApprovalJson()
+        String json = terms == null ? ListingTestSupport.accommodationJson()
                 : withTerms(ListingTestSupport.accommodationJson(), terms);
         Long id = support.create(owner, "/accommodations", json);
         support.approveListing(admin, id).andExpect(status().isOk());
@@ -340,7 +344,7 @@ class BookingCancellationFlowTest {
 
     // 2 nights for 2 guests with the 30 % deposit paid
     private Long paidBooking(Long listing, LocalDate arrival) throws Exception {
-        Long id = bookings.book(guest, listing, arrival, arrival.plusDays(2), 2);
+        Long id = bookings.bookApproved(guest, owner, listing, arrival, arrival.plusDays(2), 2);
         bookings.pay(guest, id).andExpect(jsonPath("$.status").value("CONFIRMED"));
         return id;
     }

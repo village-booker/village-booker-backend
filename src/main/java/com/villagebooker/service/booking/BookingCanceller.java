@@ -41,9 +41,12 @@ public class BookingCanceller {
         return new CancellationResponse(BookingResponse.from(booking), paid, refund);
     }
 
+    // CANCELLED_MIN_NOT_REACHED comes from the scheduler, which can run on the first day (deadline 0 days before)
     public CancellationResponse cancel(Booking booking, BookingStatus status, String reason) {
         BookingTransitions.check(booking.getStatus(), status);
-        requireNotStarted(booking);
+        if (status != BookingStatus.CANCELLED_MIN_NOT_REACHED) {
+            requireNotStarted(booking);
+        }
         Instant now = Instant.now(clock);
         BigDecimal percentage = Refunds.percentage(booking, status, now);
         statusChanger.moveTo(booking, status);
@@ -63,8 +66,12 @@ public class BookingCanceller {
     // The tour date is only a lazy proxy until here, so the locking query loads its current bookedCount. A caller
     // that already holds the lock gets the same (current) instance back.
     void releasePlaces(Booking booking) {
+        releasePlaces(booking, Instant.now(clock));
+    }
+
+    void releasePlaces(Booking booking, Instant at) {
         TourDate date = tourDateRepo.findByIdForUpdate(booking.getTourDate().getId()).orElseThrow();
-        TourDateSeats.release(date, booking.getGuestCount(), Instant.now(clock));
+        TourDateSeats.release(date, booking.getGuestCount(), at);
     }
 
     // a stay or tour that has begun is not cancelled through the app (that is for the admin to sort out)

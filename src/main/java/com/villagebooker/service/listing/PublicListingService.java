@@ -104,7 +104,7 @@ public class PublicListingService {
 
         return new PublicListingResponse(
                 full.id(), full.type(), listing.getStatus() == ListingStatus.APPROVED, full.name(), full.description(),
-                full.requiresOwnerApproval(), full.minGuests(), full.maxGuests(), full.address(), full.place(),
+                full.minGuests(), full.maxGuests(), full.address(), full.place(),
                 full.municipality(), full.district(), full.latitude(), full.longitude(), full.cancellationPolicy(),
                 full.paymentMethod(), full.depositPercentage(), full.freeCancellationDays(), full.refundPercentage(),
                 full.rating(), full.reviewCount(), full.accommodation(), full.tour(),

@@ -17,7 +17,6 @@ import java.math.BigDecimal;
 public record AccommodationRequest(
         @NotBlank @Size(max = 150) String name,
         @Size(max = 4000) String description,
-        boolean requiresOwnerApproval,
         @NotNull @Min(1) @Max(1000) Integer minGuests,
         @NotNull @Min(1) @Max(1000) Integer maxGuests,
         @Size(max = 255) String address,

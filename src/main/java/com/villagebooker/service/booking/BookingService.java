@@ -59,9 +59,9 @@ public class BookingService {
         LocalDate start = request.arrival();
         LocalDate end = request.departure().minusDays(1);
         LocalDate today = AppTime.today(clock);
-        if (end.isBefore(start) || start.isBefore(today) || end.isAfter(today.plusDays(MAX_DAYS_AHEAD))) {
+        if (end.isBefore(start) || !start.isAfter(today) || end.isAfter(today.plusDays(MAX_DAYS_AHEAD))) {
             throw new BadRequestException(ErrorCode.BOOKING_DATES_INVALID,
-                    "arrival must be today or later, departure after arrival and the last night at most "
+                    "arrival must be tomorrow or later, departure after arrival and the last night at most "
                             + MAX_DAYS_AHEAD + " days ahead.",
                     Map.of("maxDays", MAX_DAYS_AHEAD));
         }
@@ -80,7 +80,7 @@ public class BookingService {
         Booking booking = newBooking(guestId, listing, request.guestCount(), request.note(), start, end);
         BookingTerms.copy(listing, booking, ListingPrices.accommodationTotal(accommodation, request.guestCount(),
                 request.arrival(), request.departure()));
-        return BookingResponse.from(save(listing, booking));
+        return BookingResponse.from(save(booking));
     }
 
     @Transactional
@@ -109,7 +109,7 @@ public class BookingService {
                 date.getStartDate(), date.getEndDate());
         booking.setTourDate(date);
         BookingTerms.copy(listing, booking, ListingPrices.tourTotal(tour, request.guestCount()));
-        return BookingResponse.from(save(listing, booking));
+        return BookingResponse.from(save(booking));
     }
 
     // a listing that does not exist for guests (pending, rejected, deleted) is 404; a paused one is visible but closed
@@ -151,8 +151,9 @@ public class BookingService {
         return booking;
     }
 
-    private Booking save(Listing listing, Booking booking) {
-        statusChanger.start(booking, BookingTerms.initialStatus(listing, booking));
+    // the host approves every booking, whatever the payment method
+    private Booking save(Booking booking) {
+        statusChanger.start(booking, BookingStatus.AWAITING_OWNER_APPROVAL);
         return bookingRepo.save(booking);
     }
 

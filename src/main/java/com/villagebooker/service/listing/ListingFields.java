@@ -31,8 +31,6 @@ final class ListingFields {
     private static final List<Field> FIELDS = List.of(
             common("name", Listing::getName, Listing::setName),
             common("description", Listing::getDescription, Listing::setDescription),
-            common("requiresOwnerApproval", Listing::isRequiresOwnerApproval,
-                    (l, v) -> l.setRequiresOwnerApproval(Boolean.parseBoolean(v))),
             common("minGuests", Listing::getMinGuests, (l, v) -> l.setMinGuests(toInt(v))),
             common("maxGuests", Listing::getMaxGuests, (l, v) -> l.setMaxGuests(toInt(v))),
             common("address", Listing::getAddress, Listing::setAddress),

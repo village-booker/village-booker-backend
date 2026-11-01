@@ -13,8 +13,6 @@ public interface ListingRequest {
 
     String description();
 
-    boolean requiresOwnerApproval();
-
     Integer minGuests();
 
     Integer maxGuests();

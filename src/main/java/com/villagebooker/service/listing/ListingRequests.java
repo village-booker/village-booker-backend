@@ -101,7 +101,6 @@ final class ListingRequests {
     private static void copyCommon(ListingRequest request, Listing listing) {
         listing.setName(request.name().trim());
         listing.setDescription(blankToNull(request.description()));
-        listing.setRequiresOwnerApproval(request.requiresOwnerApproval());
         listing.setMinGuests(request.minGuests());
         listing.setMaxGuests(request.maxGuests());
         listing.setAddress(blankToNull(request.address()));

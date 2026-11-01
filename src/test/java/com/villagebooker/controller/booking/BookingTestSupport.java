@@ -13,9 +13,9 @@ import static com.villagebooker.controller.listing.ListingTestSupport.OWNER;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// Booking requests for the tests. Listings come from ListingTestSupport: accommodationJson() is instant, ON_SITE,
-// NON_REFUNDABLE, 1..4 guests, 5000 per night for 2 guests (+1000 per extra guest); tourJson() is 2 days,
-// 2..12 guests per date, 3500 per person.
+// Booking requests for the tests. Every booking starts as a request the host approves. Listings come from
+// ListingTestSupport: accommodationJson() is ON_SITE, NON_REFUNDABLE, 1..4 guests, 5000 per night for 2 guests
+// (+1000 per extra guest); tourJson() is 2 days, 2..12 guests per date, 3500 per person.
 public record BookingTestSupport(MockMvc mvc) {
 
     public static final String BOOKINGS = "/api/bookings";
@@ -23,22 +23,11 @@ public record BookingTestSupport(MockMvc mvc) {
 
     private static final String DEFAULT_TERMS = "\"cancellationPolicy\": \"NON_REFUNDABLE\", \"paymentMethod\": \"ON_SITE\"";
 
-    // the host has to approve every booking; no deposit
-    public static String manualApprovalJson() {
-        return ListingTestSupport.accommodationJson()
-                .replace("\"minGuests\"", "\"requiresOwnerApproval\": true, \"minGuests\"");
-    }
-
-    // instant, 30 % deposit online, free cancellation until 7 days before arrival
+    // 30 % deposit online after the approval, free cancellation until 7 days before arrival
     public static String depositJson() {
         return ListingTestSupport.accommodationJson().replace(DEFAULT_TERMS,
                 "\"cancellationPolicy\": \"FREE\", \"freeCancellationDays\": 7, "
                         + "\"paymentMethod\": \"ONLINE\", \"depositPercentage\": 30");
-    }
-
-    // host approval first, then the 30 % deposit
-    public static String manualApprovalWithDepositJson() {
-        return depositJson().replace("\"minGuests\"", "\"requiresOwnerApproval\": true, \"minGuests\"");
     }
 
     // accommodationJson() / tourJson() with other cancellation and payment terms, e.g.
@@ -72,6 +61,19 @@ public record BookingTestSupport(MockMvc mvc) {
     public Long book(String token, Long listingId, LocalDate arrival, LocalDate departure, int guests)
             throws Exception {
         return idOf(bookAccommodation(token, listingId, arrival, departure, guests).andExpect(status().isCreated()));
+    }
+
+    // booked and approved by the host: CONFIRMED, or AWAITING_PAYMENT with a deposit
+    public Long bookApproved(String token, String ownerToken, Long listingId, LocalDate arrival, LocalDate departure,
+                             int guests) throws Exception {
+        Long id = book(token, listingId, arrival, departure, guests);
+        approve(ownerToken, id).andExpect(status().isOk());
+        return id;
+    }
+
+    public ResultActions approve(String ownerToken, Long bookingId) throws Exception {
+        return mvc.perform(post(OWNER_BOOKINGS + "/" + bookingId + "/approve")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken));
     }
 
     public Long createDate(String ownerToken, Long tourId, LocalDate start) throws Exception {

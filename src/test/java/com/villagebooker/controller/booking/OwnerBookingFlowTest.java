@@ -82,8 +82,8 @@ class OwnerBookingFlowTest {
     @Test
     void hostSeesBookingsOfOwnListingsWithFilters() throws Exception {
         Long cabin = approved(support.createAccommodation(owner));
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
-        Long confirmed = bookings.book(guest, cabin, d, d.plusDays(1), 2);
+        Long manual = approved(support.createAccommodation(owner));
+        Long confirmed = bookings.bookApproved(guest, owner, cabin, d, d.plusDays(1), 2);
         Long request = bookings.book(guest, manual, d, d.plusDays(1), 2);
         String otherHost = support.ownerToken();
         Long otherListing = approved(support.createAccommodation(otherHost));
@@ -118,7 +118,7 @@ class OwnerBookingFlowTest {
 
     @Test
     void guestsCannotUseTheHostRoutes() throws Exception {
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long manual = approved(support.createAccommodation(owner));
         Long request = bookings.book(guest, manual, d, d.plusDays(1), 2);
 
         list(guest, "").andExpect(status().isForbidden());
@@ -128,7 +128,7 @@ class OwnerBookingFlowTest {
 
     @Test
     void approvalWithoutDepositConfirmsTheBooking() throws Exception {
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long manual = approved(support.createAccommodation(owner));
         Long request = bookings.book(guest, manual, d, d.plusDays(1), 2);
 
         approve(owner, request)
@@ -146,8 +146,7 @@ class OwnerBookingFlowTest {
 
     @Test
     void approvalWithDepositWaitsForThePayment() throws Exception {
-        Long listing = approved(support.create(owner, "/accommodations",
-                BookingTestSupport.manualApprovalWithDepositJson()));
+        Long listing = approved(support.create(owner, "/accommodations", BookingTestSupport.depositJson()));
         Long request = bookings.book(guest, listing, d, d.plusDays(1), 2);
 
         Instant before = Instant.now();
@@ -157,7 +156,7 @@ class OwnerBookingFlowTest {
                 .andExpect(jsonPath("$.booking.depositAmount").value(1500))
                 .andReturn().getResponse().getContentAsString();
         Instant expiresAt = Instant.parse(JsonPath.read(body, "$.booking.expiresAt"));
-        assertThat(expiresAt).isBetween(before.plus(Duration.ofMinutes(15)), Instant.now().plus(Duration.ofMinutes(15)));
+        assertThat(expiresAt).isBetween(before.plus(Duration.ofHours(24)), Instant.now().plus(Duration.ofHours(24)));
 
         // the host cannot skip the payment by approving once more
         approve(owner, request)
@@ -167,17 +166,8 @@ class OwnerBookingFlowTest {
     }
 
     @Test
-    void instantBookingsAreNotApprovedOrDeclined() throws Exception {
-        Long cabin = approved(support.createAccommodation(owner));
-        Long confirmed = bookings.book(guest, cabin, d, d.plusDays(1), 2);
-
-        approve(owner, confirmed).andExpect(status().isConflict());
-        reject(owner, confirmed, "Ne").andExpect(status().isConflict());
-    }
-
-    @Test
     void declinedRequestFreesTheNightsAndShowsTheReason() throws Exception {
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long manual = approved(support.createAccommodation(owner));
         Long request = bookings.book(guest, manual, d, d.plusDays(2), 2);
         bookings.bookAccommodation(support.userToken(), manual, d.plusDays(1), d.plusDays(2), 2)
                 .andExpect(status().isConflict());
@@ -197,7 +187,7 @@ class OwnerBookingFlowTest {
 
     @Test
     void reasonIsOptionalButLimited() throws Exception {
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long manual = approved(support.createAccommodation(owner));
         Long first = bookings.book(guest, manual, d, d.plusDays(1), 2);
         Long second = bookings.book(guest, manual, d.plusDays(5), d.plusDays(6), 2);
 
@@ -214,8 +204,7 @@ class OwnerBookingFlowTest {
 
     @Test
     void declinedTourRequestGivesThePlacesBack() throws Exception {
-        Long tourId = approved(support.create(owner, "/tours", ListingTestSupport.tourJson()
-                .replace("\"minGuests\"", "\"requiresOwnerApproval\": true, \"minGuests\"")));
+        Long tourId = approved(support.createTour(owner));
         Long dateId = bookings.createDate(owner, tourId, d.plusDays(10));
         Long first = BookingTestSupport.idOf(bookings.bookTour(guest, dateId, 1).andExpect(status().isCreated()));
         bookings.bookTour(support.userToken(), dateId, 1).andExpect(status().isCreated());
@@ -227,9 +216,24 @@ class OwnerBookingFlowTest {
         assertDate(dateId, 1, TourDateStatus.OPEN);
     }
 
+    // the payment deadline after the approval is cut the same way as the approval deadline
+    @Test
+    void paymentDeadlineEndsAtTheTourMinimumDeadline() throws Exception {
+        Long tourId = approved(support.create(owner, "/tours", BookingTestSupport.withTerms(ListingTestSupport.tourJson(),
+                "\"cancellationPolicy\": \"NON_REFUNDABLE\", \"paymentMethod\": \"ONLINE\", \"depositPercentage\": 30")));
+        // minimum deadline 2 days before: the start of tomorrow, less than 24 hours away
+        LocalDate start = AppTime.today(clock).plusDays(3);
+        Long dateId = bookings.createDate(owner, tourId, start);
+        Long request = BookingTestSupport.idOf(bookings.bookTour(guest, dateId, 2).andExpect(status().isCreated()));
+
+        approve(owner, request)
+                .andExpect(jsonPath("$.booking.status").value("AWAITING_PAYMENT"))
+                .andExpect(jsonPath("$.booking.expiresAt").value(AppTime.startOfDay(start.minusDays(2)).toString()));
+    }
+
     @Test
     void expiredRequestCannotBeApprovedButCanBeDeclined() throws Exception {
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long manual = approved(support.createAccommodation(owner));
         Long request = bookings.book(guest, manual, d, d.plusDays(1), 2);
         Booking booking = bookingRepo.findById(request).orElseThrow();
         booking.setExpiresAt(Instant.now().minusSeconds(1));

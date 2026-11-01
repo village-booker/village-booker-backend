@@ -70,6 +70,14 @@ class TourDateSeatsTest {
         assertDate(cancelled, 0, TourDateStatus.CANCELLED);
     }
 
+    // a request that expires at the deadline itself (its expiresAt is cut to the deadline) is not counted there
+    @Test
+    void placesFreedAtTheDeadlineItselfStillOpenTheDate() {
+        TourDate date = date(4, TourDateStatus.CONFIRMED);
+        TourDateSeats.release(date, 1, DEADLINE);
+        assertDate(date, 3, TourDateStatus.OPEN);
+    }
+
     private static TourDate date(int booked, TourDateStatus status) {
         Tour tour = new Tour();
         tour.setMinGuests(4);

@@ -23,14 +23,15 @@ final class TourDateSeats {
         }
     }
 
-    // after the minimum deadline a confirmed date stays confirmed even below the minimum: the tour takes place
-    static void release(TourDate date, int guestCount, Instant now) {
+    // After the minimum deadline a confirmed date stays confirmed even below the minimum: the tour takes place.
+    // at = when the places were freed; a request that expires at the deadline itself is not counted at the deadline.
+    static void release(TourDate date, int guestCount, Instant at) {
         int booked = date.getBookedCount() - guestCount;
         date.setBookedCount(booked);
         if (date.getStatus() != TourDateStatus.FULL && date.getStatus() != TourDateStatus.CONFIRMED) {
             return;
         }
-        if (booked < date.getTour().getMinGuests() && now.isBefore(date.getMinGuestsDeadline())) {
+        if (booked < date.getTour().getMinGuests() && !at.isAfter(date.getMinGuestsDeadline())) {
             date.setStatus(TourDateStatus.OPEN);
         } else {
             date.setStatus(TourDateStatus.CONFIRMED);

@@ -83,7 +83,7 @@ class SimulatedPaymentFlowTest {
     @Test
     void depositConfirmsTheBookingAndLowersTheAmountDue() throws Exception {
         Long listing = approved(support.create(owner, "/accommodations", BookingTestSupport.depositJson()));
-        Long bookingId = bookings.book(guest, listing, d, d.plusDays(2), 2);
+        Long bookingId = bookings.bookApproved(guest, owner, listing, d, d.plusDays(2), 2);
 
         pay(guest, bookingId)
                 .andExpect(status().isOk())
@@ -111,16 +111,15 @@ class SimulatedPaymentFlowTest {
     void fullPrepaymentIsOnePaymentOfTypeFull() throws Exception {
         Long listing = approved(support.create(owner, "/accommodations",
                 BookingTestSupport.depositJson().replace("\"depositPercentage\": 30", "\"depositPercentage\": 100")));
-        Long bookingId = bookings.book(guest, listing, d, d.plusDays(1), 2);
+        Long bookingId = bookings.bookApproved(guest, owner, listing, d, d.plusDays(1), 2);
 
         pay(guest, bookingId).andExpect(jsonPath("$.amountDue").value(0));
         assertThat(paymentRepo.findByBookingId(bookingId).getFirst().getType()).isEqualTo(PaymentType.FULL);
     }
 
     @Test
-    void manualApprovalComesBeforeThePayment() throws Exception {
-        Long listing = approved(support.create(owner, "/accommodations",
-                BookingTestSupport.manualApprovalWithDepositJson()));
+    void hostApprovalComesBeforeThePayment() throws Exception {
+        Long listing = approved(support.create(owner, "/accommodations", BookingTestSupport.depositJson()));
         Long bookingId = bookings.book(guest, listing, d, d.plusDays(1), 2);
 
         pay(guest, bookingId)
@@ -135,7 +134,7 @@ class SimulatedPaymentFlowTest {
     @Test
     void onlyTheGuestPaysAndOnlyBeforeTheDeadline() throws Exception {
         Long listing = approved(support.create(owner, "/accommodations", BookingTestSupport.depositJson()));
-        Long bookingId = bookings.book(guest, listing, d, d.plusDays(1), 2);
+        Long bookingId = bookings.bookApproved(guest, owner, listing, d, d.plusDays(1), 2);
 
         pay(support.userToken(), bookingId)
                 .andExpect(status().isNotFound())
@@ -153,7 +152,7 @@ class SimulatedPaymentFlowTest {
     @Test
     void bookingWithoutDepositHasNothingToPay() throws Exception {
         Long cabin = approved(support.createAccommodation(owner));
-        Long bookingId = bookings.book(guest, cabin, d, d.plusDays(1), 2);
+        Long bookingId = bookings.bookApproved(guest, owner, cabin, d, d.plusDays(1), 2);
 
         pay(guest, bookingId)
                 .andExpect(status().isConflict())

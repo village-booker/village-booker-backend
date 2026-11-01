@@ -79,13 +79,13 @@ class BookingFlowTest {
     }
 
     @Test
-    void instantBookingIsConfirmedWithPriceAndTermsCopied() throws Exception {
+    void bookingWaitsForTheHostWithPriceAndTermsCopied() throws Exception {
         Long listingId = approved(support.createAccommodation(owner));
         LocalDate arrival = today().plusDays(10);
 
         bookings.bookAccommodation(guest, listingId, arrival, arrival.plusDays(2), 3)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.status").value("AWAITING_OWNER_APPROVAL"))
                 .andExpect(jsonPath("$.listingType").value("ACCOMMODATION"))
                 .andExpect(jsonPath("$.startDate").value(arrival.toString()))
                 .andExpect(jsonPath("$.endDate").value(arrival.plusDays(1).toString()))
@@ -96,17 +96,16 @@ class BookingFlowTest {
                 .andExpect(jsonPath("$.cancellationPolicy").value("NON_REFUNDABLE"))
                 .andExpect(jsonPath("$.freeCancellationUntil").doesNotExist())
                 .andExpect(jsonPath("$.paymentMethod").value("ON_SITE"))
-                .andExpect(jsonPath("$.depositAmount").doesNotExist())
-                .andExpect(jsonPath("$.expiresAt").doesNotExist());
+                .andExpect(jsonPath("$.depositAmount").doesNotExist());
     }
 
     @Test
-    void ownerApprovalAndDepositStartWithAnExpiringStatus() throws Exception {
+    void everyBookingWaitsForTheHostEvenWithADeposit() throws Exception {
         LocalDate arrival = today().plusDays(20);
 
-        Long manual = approved(support.create(owner, "/accommodations", BookingTestSupport.manualApprovalJson()));
+        Long onSite = approved(support.createAccommodation(owner));
         Instant before = Instant.now();
-        String body = bookings.bookAccommodation(guest, manual, arrival, arrival.plusDays(1), 2)
+        String body = bookings.bookAccommodation(guest, onSite, arrival, arrival.plusDays(1), 2)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("AWAITING_OWNER_APPROVAL"))
                 .andReturn().getResponse().getContentAsString();
@@ -116,14 +115,40 @@ class BookingFlowTest {
         before = Instant.now();
         body = bookings.bookAccommodation(guest, deposit, arrival, arrival.plusDays(1), 2)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("AWAITING_PAYMENT"))
+                .andExpect(jsonPath("$.status").value("AWAITING_OWNER_APPROVAL"))
                 .andExpect(jsonPath("$.depositPercentage").value(30))
                 // 30 % of 5000
                 .andExpect(jsonPath("$.depositAmount").value(1500))
                 .andExpect(jsonPath("$.amountDue").value(5000))
                 .andExpect(jsonPath("$.freeCancellationUntil").value(AppTime.startOfDay(arrival.minusDays(7)).toString()))
                 .andReturn().getResponse().getContentAsString();
-        assertExpiresAfter(body, before, Duration.ofMinutes(15));
+        assertExpiresAfter(body, before, Duration.ofHours(24));
+    }
+
+    // spec 8: the host answers by the start of the stay; for a tour, by the minimum-guests deadline while it is ahead
+    @Test
+    void requestDeadlineEndsAtTheStartOrAtTheTourMinimumDeadline() throws Exception {
+        Long cabin = approved(support.createAccommodation(owner));
+        LocalDate tomorrow = today().plusDays(1);
+        bookings.bookAccommodation(guest, cabin, tomorrow, tomorrow.plusDays(1), 2)
+                .andExpect(jsonPath("$.expiresAt").value(AppTime.startOfDay(tomorrow).toString()));
+
+        Long tourId = approved(support.createTour(owner));
+        // minimum deadline 2 days before = the start of tomorrow
+        LocalDate start = today().plusDays(3);
+        Long dateId = bookings.createDate(owner, tourId, start);
+        bookings.bookTour(guest, dateId, 1)
+                .andExpect(jsonPath("$.expiresAt").value(AppTime.startOfDay(start.minusDays(2)).toString()));
+
+        // after the minimum deadline only the start of the tour limits it
+        TourDate date = tourDateRepo.findById(dateId).orElseThrow();
+        date.setMinGuestsDeadline(Instant.now().minusSeconds(60));
+        tourDateRepo.saveAndFlush(date);
+        Instant before = Instant.now();
+        String body = bookings.bookTour(support.userToken(), dateId, 1)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        assertExpiresAfter(body, before, Duration.ofHours(24));
     }
 
     @Test
@@ -187,6 +212,9 @@ class BookingFlowTest {
                 .andExpect(jsonPath("$.code").value("BOOKING_DATES_INVALID"));
         bookings.bookAccommodation(guest, listingId, today.minusDays(1), today.plusDays(1), 2)
                 .andExpect(jsonPath("$.code").value("BOOKING_DATES_INVALID"));
+        // the host needs time to answer: arrival tomorrow at the earliest
+        bookings.bookAccommodation(guest, listingId, today, today.plusDays(1), 2)
+                .andExpect(jsonPath("$.code").value("BOOKING_DATES_INVALID"));
         bookings.bookAccommodation(guest, listingId, today.plusDays(365), today.plusDays(367), 2)
                 .andExpect(jsonPath("$.code").value("BOOKING_DATES_INVALID"));
         mvc.perform(post(BOOKINGS + "/accommodations")
@@ -197,7 +225,8 @@ class BookingFlowTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors.guestCount.code").value("NotNull"));
-        bookings.bookAccommodation(guest, listingId, today, today.plusDays(1), 2).andExpect(status().isCreated());
+        bookings.bookAccommodation(guest, listingId, today.plusDays(1), today.plusDays(2), 2)
+                .andExpect(status().isCreated());
     }
 
     @Test

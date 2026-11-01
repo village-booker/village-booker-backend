@@ -60,10 +60,10 @@ Enumi:
 ## 1) Zakljucane poslovne odluke
 
 - Kapara je opciona i definise se na `Usluga`.
-- `Usluga` dobija polje: `zahtevaPotvrduVlasnika` (`boolean`).
-- Booking mode:
-- `true` -> manual approval
-- `false` -> instant booking
+- Domacin potvrdjuje **svaku** rezervaciju, bez obzira na nacin placanja (odluka tima, novembar 2026). Nema instant rezervacije.
+  - Polje `zahtevaPotvrduVlasnika` (`requiresOwnerApproval`) nije deo API-ja; kolona ostaje (uvek `true`) dok se ne napravi Flyway `V1`.
+  - Svaka rezervacija pocinje kao `CEKA_POTVRDU_VLASNIKA`; posle potvrde ide u `CEKA_PLACANJE` (ima kaparu) ili `ODOBRENO`.
+  - Dolazak (smestaj) i pocetak termina (tura) su najranije sutra, da domacin ima vremena da odgovori.
 - Pravilo za kaparu (u `RezervacijaService`, ne u kontroleru):
 
 ```text
@@ -168,26 +168,20 @@ Refund ostaje jedan status (`REFUNDIRANO`), a razlika parcijalni/puni refund ide
 
 ## 3) Flow (state machine)
 
-### Manual + bez kapare
+Domacin potvrdjuje svaku rezervaciju (sekcija 1), pa postoje samo dva toka.
+
+### Bez kapare
 
 - `CEKA_POTVRDU_VLASNIKA -> ODOBRENO -> ZAVRSENO`
 - `CEKA_POTVRDU_VLASNIKA -> ODBIJENO`
 - `CEKA_POTVRDU_VLASNIKA -> ISTEKLO`
 
-### Manual + kapara
+### Sa kaparom
 
 - `CEKA_POTVRDU_VLASNIKA -> CEKA_PLACANJE -> ODOBRENO -> ZAVRSENO`
+- `CEKA_POTVRDU_VLASNIKA -> ODBIJENO`
 - `CEKA_POTVRDU_VLASNIKA -> ISTEKLO`
 - `CEKA_PLACANJE -> ISTEKLO`
-
-### Instant + kapara
-
-- `CEKA_PLACANJE -> ODOBRENO -> ZAVRSENO`
-- `CEKA_PLACANJE -> ISTEKLO`
-
-### Instant + bez kapare
-
-- `ODOBRENO -> ZAVRSENO`
 
 ### Otkazivanje (iz aktivnih stanja)
 
@@ -309,15 +303,21 @@ Datum je zauzet ako se preklapa sa aktivnom rezervacijom **ili** sa `NedostupanP
 ## 8) Timeout mehanizam
 
 - `CEKA_POTVRDU_VLASNIKA -> ISTEKLO` nakon `24h` (`app.booking.owner-approval-timeout`).
-- `CEKA_PLACANJE -> ISTEKLO` nakon `15m` (`app.booking.payment-timeout`).
-- Pri svakom prelasku u status koji moze da istekne servis postavlja `Rezervacija.isticeU = now + timeout`; pri izlasku iz njega `isticeU = null`.
-- Scheduler bira `WHERE status IN (...) AND istice_u < now()` (indeks `idx_rezervacija_status_istice`) i menja samo status.
-- Smestaj: rezervisani termini se automatski oslobadjaju jer overlap blokira samo aktivne statuse.
-- Tura: pri isteku rezervacije scheduler umanjuje `TerminTure.brPrijavljenih` (vidi 5.1).
-- Tura: posle `TerminTure.rokZaMin`, ako je `brPrijavljenih < minBrOsoba` -> termin `OTKAZAN`, sve aktivne rezervacije `OTKAZANO_NEDOVOLJNO_PRIJAVA`, puni refund.
-- Tura: termin posle `datumDo` -> `ZAVRSEN`.
-- Konfigurabilno kroz `application.properties` (ne hardcode).
-- ShedLock: preporuka da bude ukljucen odmah zbog multi-instance sigurnosti.
+- `CEKA_PLACANJE -> ISTEKLO` nakon `24h` od potvrde (`app.booking.payment-timeout`).
+- Pri svakom prelasku u status koji moze da istekne servis postavlja `Rezervacija.isticeU`; pri izlasku iz njega `isticeU = null` (`BookingStatusChanger`).
+- `isticeU = min(now + timeout, granica)`:
+  - granica je ponoc (Europe/Belgrade) na pocetku dana `rezervacijaOd`, pa zahtev nikad ne visi posle pocetka boravka / ture;
+  - za turu, dok `rokZaMin` nije prosao, granica je `rokZaMin`: do roka je svaki zahtev resen (potvrdjen i placen ili istekao), pa se minimum broji samo nad resenim rezervacijama.
+- Scheduler (`BookingScheduler`, na `app.booking.scheduler-delay`, podrazumevano `PT1M`) u jednom prolazu, ovim redom:
+  1. istek: `WHERE status IN (EXPIRABLE) AND istice_u < now()` (indeks `idx_booking_status_expires`) -> `ISTEKLO`.
+     - Smestaj: noci se oslobadjaju same, jer overlap blokira samo aktivne statuse.
+     - Tura: umanjuje se `TerminTure.brPrijavljenih` (vidi 5.1). Mesta se oslobadjaju u trenutku `isticeU`, pa zahtev koji istekne bas u `rokZaMin` vraca termin u `OTVOREN` i ne racuna se u minimum.
+  2. minimum: termin `OTVOREN` kome je prosao `rokZaMin` (`OTVOREN` znaci ispod minimuma) -> termin `OTKAZAN`, sve aktivne rezervacije `OTKAZANO_NEDOVOLJNO_PRIJAVA`, puni refund. Ovo otkazivanje sme i na dan pocetka ture (rok 0 dana pre = pocetak prvog dana).
+  3. zavrsavanje: rezervacija `ODOBRENO` sa `rezervacijaDo < danas` -> `ZAVRSENO`; termin `POTVRDJEN` / `POPUNJEN` sa `datumDo < danas` -> `ZAVRSEN`.
+- Svaka stavka ide u svojoj transakciji (`BookingJobs`), a greska jedne se loguje i ne zaustavlja ostale; sledeci prolaz pokusava ponovo.
+- Svaki korak ponovo proverava stanje (status, rok, datum), jer lista id-jeva moze da zastari. Dve instance koje rade isti korak zaustavlja lock termina i `@Version` na rezervaciji.
+- ShedLock: kasnije, uz Flyway (treba mu tabela). Do tada je dvostruko pokretanje bezbedno zbog provera iznad.
+- Konfigurabilno kroz `application.properties` (ne hardcode). U testovima je scheduler iskljucen (`app.scheduling.enabled=false` u `src/test/resources/config/application.properties`); testovi zovu korake direktno.
 
 ## 9) Brisanje i otkazivanje od strane vlasnika
 
@@ -431,7 +431,7 @@ Sledece:
    - [x] prikaz za gosta i domacina, domacin odobrava / odbija, simulirana uplata kapare (`app.payments.simulated`, dok se ne izabere provajder)
    - [x] otkazivanje (gost, domacin, ceo termin ture) i refund; otkazuje se samo pre dana pocetka (`BOOKING_ALREADY_STARTED`)
    - [ ] pauziranje i brisanje usluge (9.3)
-5. Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8).
+5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
 7. Recenzije (preracun `rating` / `reviewCount`), omiljene, nedostupni periodi.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.

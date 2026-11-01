@@ -36,14 +36,6 @@ final class BookingTerms {
         return AppTime.startOfDay(startDate.minusDays(listing.getFreeCancellationDays()));
     }
 
-    // spec 3: manual approval first; then the deposit, if there is one; otherwise confirmed right away
-    static BookingStatus initialStatus(Listing listing, Booking booking) {
-        if (listing.isRequiresOwnerApproval()) {
-            return BookingStatus.AWAITING_OWNER_APPROVAL;
-        }
-        return afterApproval(booking);
-    }
-
     static BookingStatus afterApproval(Booking booking) {
         return booking.hasDeposit() ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED;
     }

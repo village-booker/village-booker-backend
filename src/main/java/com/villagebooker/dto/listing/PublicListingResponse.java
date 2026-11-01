@@ -19,7 +19,6 @@ public record PublicListingResponse(
         boolean bookable,
         String name,
         String description,
-        boolean requiresOwnerApproval,
         Integer minGuests,
         Integer maxGuests,
         String address,

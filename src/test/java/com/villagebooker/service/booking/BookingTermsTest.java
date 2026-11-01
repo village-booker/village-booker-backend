@@ -49,9 +49,9 @@ class BookingTermsTest {
     }
 
     @Test
-    void startingStatusFollowsApprovalAndDeposit() {
-        Listing instant = listing(CancellationPolicy.FREE, 1, null, PaymentMethod.ON_SITE, null);
-        assertThat(statusFor(instant)).isEqualTo(BookingStatus.CONFIRMED);
+    void statusAfterApprovalFollowsTheDeposit() {
+        Listing onSite = listing(CancellationPolicy.FREE, 1, null, PaymentMethod.ON_SITE, null);
+        assertThat(statusFor(onSite)).isEqualTo(BookingStatus.CONFIRMED);
 
         Listing withDeposit = listing(CancellationPolicy.FREE, 1, null, PaymentMethod.ONLINE, "30");
         assertThat(statusFor(withDeposit)).isEqualTo(BookingStatus.AWAITING_PAYMENT);
@@ -59,9 +59,6 @@ class BookingTermsTest {
         // 0 % is the same as no deposit
         Listing zeroDeposit = listing(CancellationPolicy.FREE, 1, null, PaymentMethod.ONLINE, "0");
         assertThat(statusFor(zeroDeposit)).isEqualTo(BookingStatus.CONFIRMED);
-
-        withDeposit.setRequiresOwnerApproval(true);
-        assertThat(statusFor(withDeposit)).isEqualTo(BookingStatus.AWAITING_OWNER_APPROVAL);
     }
 
     @Test
@@ -83,7 +80,7 @@ class BookingTermsTest {
     private static BookingStatus statusFor(Listing listing) {
         Booking booking = booking();
         BookingTerms.copy(listing, booking, new BigDecimal("1000.00"));
-        return BookingTerms.initialStatus(listing, booking);
+        return BookingTerms.afterApproval(booking);
     }
 
     private static Booking booking() {
