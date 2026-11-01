@@ -1,6 +1,7 @@
 package com.villagebooker.repo.listing;
 
 import com.villagebooker.enums.listing.ImageStatus;
+import com.villagebooker.enums.listing.ListingStatus;
 import com.villagebooker.model.ListingImage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,7 +35,8 @@ public interface ListingImageRepo extends JpaRepository<ListingImage, Long> {
         String getUrl();
     }
 
-    // admin queue of images waiting for review; the listing is mapped into the response
+    // admin queue of images waiting for review, without deleted listings; the listing is mapped into the response
     @EntityGraph(attributePaths = "listing")
-    Page<ListingImage> findByStatus(ImageStatus status, Pageable pageable);
+    Page<ListingImage> findByStatusAndListingStatusNot(ImageStatus status, ListingStatus listingStatus,
+                                                       Pageable pageable);
 }

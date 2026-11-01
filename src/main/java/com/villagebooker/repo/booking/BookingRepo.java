@@ -77,7 +77,9 @@ public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificat
     // any booking (also cancelled / expired) on a tour date: then the date is cancelled instead of deleted
     boolean existsByTourDateId(Long tourDateId);
 
-    List<Booking> findByListingIdAndStatusIn(Long listingId, Collection<BookingStatus> statuses);
+    // bookings of a listing that have not begun yet (deleting the listing cancels them)
+    List<Booking> findByListingIdAndStatusInAndStartDateAfterOrderByStartDate(
+            Long listingId, Collection<BookingStatus> statuses, LocalDate today);
 
     List<Booking> findByTourDateIdAndStatusIn(Long tourDateId, Collection<BookingStatus> statuses);
 }

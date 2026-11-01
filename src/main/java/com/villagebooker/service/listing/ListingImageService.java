@@ -109,7 +109,7 @@ public class ListingImageService {
     }
 
     public PageResponse<AdminImageResponse> findByStatus(ImageStatus status, Pageable pageable) {
-        return tx.execute(s -> PageResponse.of(listingImageRepo.findByStatus(status, pageable), AdminImageResponse::from));
+        return tx.execute(s -> PageResponse.of(listingImageRepo.findByStatusAndListingStatusNot(status, ListingStatus.DELETED, pageable), AdminImageResponse::from));
     }
 
     public AdminImageResponse approve(Long imageId) {

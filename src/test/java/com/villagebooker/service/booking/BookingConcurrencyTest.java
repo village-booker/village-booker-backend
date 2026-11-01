@@ -1,7 +1,7 @@
 package com.villagebooker.service.booking;
 
 import com.jayway.jsonpath.JsonPath;
-import com.villagebooker.common.exception.ConflictException;
+import com.villagebooker.common.exception.ApiException;
 import com.villagebooker.common.time.AppTime;
 import com.villagebooker.config.TermsProperties;
 import com.villagebooker.controller.listing.ListingTestSupport;
@@ -16,6 +16,7 @@ import com.villagebooker.model.User;
 import com.villagebooker.repo.listing.ListingRepo;
 import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtService;
+import com.villagebooker.service.listing.ListingLifecycleService;
 import com.villagebooker.service.listing.UnavailablePeriodService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +79,9 @@ class BookingConcurrencyTest {
     private UnavailablePeriodService unavailablePeriodService;
 
     @Autowired
+    private ListingLifecycleService listingLifecycleService;
+
+    @Autowired
     private JdbcTemplate jdbc;
 
     @Autowired
@@ -100,6 +104,7 @@ class BookingConcurrencyTest {
             jdbc.update("delete from booking where listing_id = ?", id);
             jdbc.update("delete from unavailable_period where listing_id = ?", id);
             jdbc.update("delete from tour_date where tour_id = ?", id);
+            jdbc.update("delete from listing_status_history where listing_id = ?", id);
             jdbc.update("delete from accommodation where listing_id = ?", id);
             jdbc.update("delete from tour where listing_id = ?", id);
             Long ownerId = jdbc.queryForObject("select owner_id from listing where id = ?", Long.class, id);
@@ -175,7 +180,27 @@ class BookingConcurrencyTest {
                 .isIn("CANCELLED_BY_GUEST", "CANCELLED_BY_OWNER");
     }
 
-    // Starts all tasks at the same moment; true = succeeded, false = rejected: 409 from a check, or the
+    // spec 9.3: deletion takes the same listing lock as booking, so a booking never lands on a deleted listing
+    // (booking first -> the deletion sees it, 409; deletion first -> the listing is gone, 404)
+    @Test
+    void bookingAndListingDeletionCannotBothPass() throws Exception {
+        Long listingId = approved(support.createAccommodation(owner));
+        Long ownerId = listingRepo.findById(listingId).orElseThrow().getOwner().getId();
+        LocalDate d = AppTime.today(clock).plusDays(10);
+        Long guestId = guest();
+
+        List<Boolean> results = race(
+                () -> bookingService.createAccommodation(guestId,
+                        new AccommodationBookingRequest(listingId, d, d.plusDays(1), 2, null)),
+                () -> {
+                    listingLifecycleService.delete(ownerId, listingId, false);
+                    return null;
+                });
+
+        assertThat(results).containsExactlyInAnyOrder(true, false);
+    }
+
+    // Starts all tasks at the same moment; true = succeeded, false = rejected: 4xx from a check, or the
     // @Version / CHECK of the row that the other transaction changed first (also a 409 for the client).
     @SafeVarargs
     private static List<Boolean> race(Callable<Object>... tasks) throws Exception {
@@ -189,7 +214,7 @@ class BookingConcurrencyTest {
                     try {
                         task.call();
                         return true;
-                    } catch (ConflictException | OptimisticLockingFailureException
+                    } catch (ApiException | OptimisticLockingFailureException
                              | DataIntegrityViolationException e) {
                         return false;
                     }

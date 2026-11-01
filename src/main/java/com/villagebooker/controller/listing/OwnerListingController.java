@@ -15,6 +15,7 @@ import com.villagebooker.security.AuthUser;
 import com.villagebooker.service.listing.ChangeRequestService;
 import com.villagebooker.service.feature.FeatureService;
 import com.villagebooker.service.listing.ListingImageService;
+import com.villagebooker.service.listing.ListingLifecycleService;
 import com.villagebooker.service.listing.OwnerListingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ public class OwnerListingController {
     private final ChangeRequestService changeRequestService;
     private final FeatureService featureService;
     private final ListingImageService listingImageService;
+    private final ListingLifecycleService listingLifecycleService;
 
     @PostMapping("/accommodations")
     @ResponseStatus(HttpStatus.CREATED)
@@ -130,6 +132,25 @@ public class OwnerListingController {
     public void deleteImage(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
                             @PathVariable Long imageId) {
         listingImageService.delete(authUser.id(), id, imageId);
+    }
+
+    @PostMapping("/{id}/pause")
+    public ListingResponse pause(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
+        return listingLifecycleService.pause(authUser.id(), id);
+    }
+
+    @PostMapping("/{id}/resume")
+    public ListingResponse resume(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
+        return listingLifecycleService.resume(authUser.id(), id);
+    }
+
+    // first without cancelBookings; 409 LISTING_HAS_ACTIVE_BOOKINGS lists what would be cancelled, then again with
+    // cancelBookings=true once the host confirms
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
+                       @RequestParam(defaultValue = "false") boolean cancelBookings) {
+        listingLifecycleService.delete(authUser.id(), id, cancelBookings);
     }
 
     @GetMapping

@@ -80,6 +80,10 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
     - Najviše jedan zahtev na čekanju po oglasu (provera pod lockom oglasa), inače 409 `CHANGE_REQUEST_ALREADY_PENDING`; bez izmena 400 `NO_CHANGES`; `@Version` na zahtevu štiti od dva admina odjednom.
     - Odobren zahtev za `REJECTED` oglas odobrava i oglas (`REJECTED -> APPROVED`, `rejectionReason` se briše): ispravka i ponovni pregled su jedna odluka.
     - Novo polje koje domaćin sme da menja mora se dodati u `ListingFields`, inače ne može da se menja kroz zahtev.
+- Pauza i brisanje (`ListingLifecycleService`, spec 9.3), sve pod lockom oglasa kao kreiranje rezervacije:
+    - `POST /{id}/pause` (`APPROVED -> PAUSED_BY_OWNER`, inače 409 `LISTING_NOT_PAUSABLE`) i `POST /{id}/resume` (nazad u `APPROVED` bez admina, inače 409 `LISTING_NOT_PAUSED`). Pauziran oglas ne prima nove rezervacije i nije u pretrazi, a postojeće rezervacije teku dalje.
+    - `DELETE /{id}` iz svakog statusa: ako ima aktivnih rezervacija koje još nisu počele -> 409 `LISTING_HAS_ACTIVE_BOOKINGS` (`params.activeBookings`, `params.bookingIds`), ništa se ne menja. `DELETE /{id}?cancelBookings=true` ih otkazuje kao `CANCELLED_BY_OWNER` (100 %, bez razloga), otkazuje termine ture od sutra i oglas postaje `DELETED`. Započet boravak ili tura ostaje i normalno se završava.
+    - Zahtevi za izmenu i slike obrisanog oglasa ne prikazuju se u admin redovima čekanja.
 - Krug: kreiranje -> `PENDING` (direktne izmene) -> `APPROVED` ili `REJECTED` (+ `rejectionReason`, domaćin ga vidi) -> dalje izmene samo kroz zahtev za izmenu.
 - `ListingStatusHistory` beleži samo promene statusa (`oldStatus`, `newStatus`, `changedBy`, `reason`) preko `ListingStatusHistoryWriter`; sadržaj izmena je u `ListingChangeRequest`. Izmene `PENDING` oglasa se ne beleže.
 - Request-ovi za smeštaj i turu (`AccommodationRequest`, `TourRequest`) su ravni JSON objekti i implementiraju zajednički interfejs `ListingRequest`, pa se zajednička pravila proveravaju jednom (`OwnerListingService.checkCommonRules`).

@@ -370,6 +370,16 @@ Dva koraka, da vlasnik ne bi slucajno otkazao tudje rezervacije:
 
 Alternativa za vlasnika koji ne mora odmah da obrise: `PAUZIRANA_VLASNIK` (nove rezervacije se ne primaju, postojece se odrzavaju), pa brisanje kad prodju.
 
+Implementacija (`ListingLifecycleService`, `/api/owner/listings`):
+
+- `POST /{id}/pause`: samo iz `ODOBRENA` -> `PAUZIRANA_VLASNIK`, inace `409 LISTING_NOT_PAUSABLE`. `POST /{id}/resume`: samo iz `PAUZIRANA_VLASNIK` -> `ODOBRENA`, bez admina (sadrzaj je vec odobren), inace `409 LISTING_NOT_PAUSED`.
+- `DELETE /{id}` i `DELETE /{id}?cancelBookings=true` (umesto `otkaziRezervacije`). `409 LISTING_HAS_ACTIVE_BOOKINGS` ima `params.activeBookings` (broj) i `params.bookingIds`.
+- Brise se iz svakog statusa osim `OBRISANA` (i `NA_CEKANJU`, `ODBIJENA`, `PAUZIRANA_VLASNIK`).
+- Otkazuju se samo aktivne rezervacije koje jos nisu pocele (`rezervacijaOd > danas`), bez razloga. Zapoceti boravak ili tura ostaje (odluka tima): oglas postaje `OBRISANA`, a rezervacija se normalno zavrsava (scheduler -> `ZAVRSENO`). Zato oglas sa samo zapocetim rezervacijama ne trazi potvrdu.
+- Tura: termini koji pocinju od sutra i nisu `OTKAZAN` / `ZAVRSEN` -> `OTKAZAN`; termin koji je u toku ostaje.
+- Svaka promena statusa se upisuje u `ListingStatusHistory` (`changedBy` = domacin).
+- Zahtevi za izmenu i slike obrisanog oglasa nestaju iz admin redova cekanja (`?status=PENDING`).
+
 ### 9.4 Penali za vlasnika (v1: van sistema)
 
 Odluka za v1: penali se **ne modeluju i ne obracunavaju automatski**. Admin ih resava rucno, van aplikacije.
@@ -430,7 +440,7 @@ Sledece:
    - [x] kreiranje (smestaj, tura), snimak uslova, pocetni status
    - [x] prikaz za gosta i domacina, domacin odobrava / odbija, simulirana uplata kapare (`app.payments.simulated`, dok se ne izabere provajder)
    - [x] otkazivanje (gost, domacin, ceo termin ture) i refund; otkazuje se samo pre dana pocetka (`BOOKING_ALREADY_STARTED`)
-   - [ ] pauziranje i brisanje usluge (9.3)
+   - [x] pauziranje i brisanje usluge (9.3)
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
 7. Recenzije (preracun `rating` / `reviewCount`), omiljene, nedostupni periodi.
