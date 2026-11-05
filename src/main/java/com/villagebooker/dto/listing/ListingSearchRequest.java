@@ -27,4 +27,7 @@ public record ListingSearchRequest(
         @Size(max = 20) List<Long> featureIds,
         ListingSort sort
 ) {
+
+    public static final ListingSearchRequest EMPTY =
+            new ListingSearchRequest(null, null, null, null, null, null, null, null, null, null);
 }

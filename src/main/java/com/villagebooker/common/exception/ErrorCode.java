@@ -98,5 +98,12 @@ public enum ErrorCode {
     // pausing and deleting a listing (spec 9.3)
     LISTING_NOT_PAUSABLE,
     LISTING_NOT_PAUSED,
-    LISTING_HAS_ACTIVE_BOOKINGS
+    LISTING_HAS_ACTIVE_BOOKINGS,
+
+    // reviews
+    REVIEW_NOT_FOUND,
+    REVIEW_NOT_ALLOWED,
+    REVIEW_PERIOD_OVER,
+    REVIEW_ALREADY_EXISTS,
+    REVIEW_ALREADY_REPLIED
 }

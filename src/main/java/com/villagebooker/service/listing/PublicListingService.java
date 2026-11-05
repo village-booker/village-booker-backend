@@ -58,7 +58,8 @@ public class PublicListingService {
     static final int MAX_SEARCH_DAYS = 90;
     static final int MAX_CALENDAR_DAYS = 366;
 
-    private static final Set<ListingStatus> VISIBLE = Set.of(ListingStatus.APPROVED, ListingStatus.PAUSED_BY_OWNER);
+    // listings a guest can open (their page, reviews, favorites); only APPROVED ones can be booked
+    public static final Set<ListingStatus> VISIBLE = Set.of(ListingStatus.APPROVED, ListingStatus.PAUSED_BY_OWNER);
     private static final List<TourDateStatus> BOOKABLE_DATE = List.of(TourDateStatus.OPEN, TourDateStatus.CONFIRMED);
 
     private final ListingRepo listingRepo;
@@ -85,7 +86,7 @@ public class PublicListingService {
             case TOUR -> tourRepo.findAll(PublicListingService.<Tour>spec(request, today, sort), pageable);
         };
         Map<Long, String> images = mainImages.forGuests(result.getContent());
-        return PageResponse.of(result, listing -> toCard(listing, request, images.get(listing.getId())));
+        return PageResponse.of(result, listing -> card(listing, request, images.get(listing.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -189,7 +190,12 @@ public class PublicListingService {
         };
     }
 
-    private static ListingCardResponse toCard(Listing listing, ListingSearchRequest r, String mainImageUrl) {
+    // a card without search data: price per night / per person, no total
+    public static ListingCardResponse card(Listing listing, String mainImageUrl) {
+        return card((Listing) Hibernate.unproxy(listing), ListingSearchRequest.EMPTY, mainImageUrl);
+    }
+
+    private static ListingCardResponse card(Listing listing, ListingSearchRequest r, String mainImageUrl) {
         ListingType type;
         BigDecimal price;
         BigDecimal total = null;

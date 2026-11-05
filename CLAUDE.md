@@ -138,6 +138,15 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
     - U testovima je isključen (`app.scheduling.enabled=false` u `src/test/resources/config/application.properties`, koji se učitava preko glavnog); testovi zovu korake iz `BookingJobs` direktno i "pomeraju vreme" upisom prošlih rokova i datuma.
 - Statusi i prelazi su definisani u spec-u; ne uvoditi nove statuse bez izmene spec-a.
 
+## Recenzije i omiljeni oglasi
+
+- Recenzija (`ReviewService`, `ReviewController`): gost `POST /api/bookings/{bookingId}/review` sa `rating` (1..5) i opcionim `comment` (do 2000, prazan = bez komentara), `GET /api/bookings/{bookingId}/review` (svoja). Samo za svoju rezervaciju (tuđa -> 404 `BOOKING_NOT_FOUND`), samo `COMPLETED` (inače 409 `REVIEW_NOT_ALLOWED`), jedna po rezervaciji (409 `REVIEW_ALREADY_EXISTS`), najkasnije 14 dana od dana posle poslednjeg zauzetog datuma, uključujući taj dan (`ReviewService.lastReviewDay`, inače 409 `REVIEW_PERIOD_OVER` sa `params.lastDay`). Gost ne menja i ne briše recenziju.
+- Javno, bez tokena: `GET /api/listings/{id}/reviews` (najnovije prvo, `PublicReviewResponse`: gost samo ime i slika), za oglase iz `PublicListingService.VISIBLE` (`APPROVED`, `PAUSED_BY_OWNER`).
+- Domaćin (`/api/owner/reviews`, `hasRole('OWNER')`): `GET ?listingId=` (recenzije njegovih oglasa), `POST /{id}/reply` sa `reply` (do 2000): jedan javni odgovor, bez izmene (409 `REVIEW_ALREADY_REPLIED`, uslovni `update` u `ReviewRepo.replyIfAbsent`); tuđa recenzija -> 404 `REVIEW_NOT_FOUND`.
+- Admin (`/api/admin/reviews`, `hasRole('ADMIN')`): `GET ?listingId=` (i uklonjene), `DELETE /{id}` (red ostaje sa `deletedAt`, skriven svuda, ne računa se u ocenu, gost ne može da napiše novu; ponovni poziv ne menja ništa), `DELETE /{id}/reply` (domaćin posle može ponovo da odgovori). Prijava recenzije adminu je za kasnije.
+- `Listing.rating` / `reviewCount` se uvek preračunavaju iz recenzija bez `deletedAt` (`ListingRating`, prosek `HALF_UP` na 2 decimale), pod lockom oglasa. Posle locka ide `refresh` oglasa, jer follow-on locking pročita red pre čekanja na lock, pa bi druga recenzija pala na `@Version` (dokaz: `BookingConcurrencyTest`).
+- Omiljeni (`FavoriteService`, `/api/users/me/favorites`, svaki prijavljen korisnik): `PUT /{listingId}` i `DELETE /{listingId}` (204, oba idempotentna; dodavanje je `insert ... on conflict do nothing`), `GET` (najnovije dodati prvi, `FavoriteResponse` = kartica oglasa + `bookable` + `addedAt`), `GET /ids?listingIds=` (koji su od datih, do 100, sačuvani; za srca na strani pretrage). Dodaje se samo oglas iz `VISIBLE` (inače 404), a obrisan ili odbijen oglas ispada iz liste.
+
 ## Slojevi i API
 
 - Controller je tanak: prima request DTO (Bean Validation), vraća response DTO. Entiteti nikad ne izlaze iz servisa.
@@ -146,6 +155,10 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - Greške se vraćaju kao `ProblemDetail` iz jednog `@RestControllerAdvice` (`common.exception.GlobalExceptionHandler`). Servis baca `NotFoundException` (404), `ConflictException` (409), `BadRequestException` (400, prekršeno poslovno pravilo) ili `ForbiddenException` (403, nije vlasnik); ne pravi `ResponseEntity` sa greškom ručno. Detalji iz baze i stack trace idu samo u log, nikad klijentu.
 - Jezik (dugme SR / EN): backend ne prevodi ništa, prevodi frontend. Zato svaka greška ima stabilan `code` iz enuma `ErrorCode` (`ApiException` je baza svih poslovnih izuzetaka: `new ConflictException(ErrorCode.X, "English detail")`, opciono i `params` za vrednosti u prevedenom tekstu). `detail` je na engleskom i služi programerima. Validacija vraća `errors: {polje: {code: "Size", params: {min, max}, message}}`, gde je `code` ime anotacije. Novo poslovno pravilo = nov kod u `ErrorCode`; postojeći kod se ne preimenuje kad ga frontend koristi. Enumi (statusi i sl.) idu kao kodovi i frontend ih prevodi.
 - Izabrani jezik se čuva na korisniku (`User.language`, `SR` podrazumevano): opciono polje `language` pri registraciji, `PUT /api/users/me/language`, vraća se u `UserResponse`. Koristi se za mejlove i da bi izbor pratio korisnika na drugim uređajima. Sadržaj koji pišu korisnici (opisi oglasa, recenzije) se ne prevodi.
+
+## Redosled rada
+
+Spoljne stvari i integracije rade se na kraju, kad je sav ostali posao gotov: mejlovi (slanje i provajder), pravi provajder plaćanja, Flyway sa ShedLock-om, deploy. Do tada ide samo ono što radi bez spoljnog servisa (Cloudinary je već uveden). Kad je sledeći korak iz spec-a integracija, preskače se i radi se prvi sledeći koji nije.
 
 ## Otvorene odluke (ne implementirati bez dogovora tima)
 

@@ -9,6 +9,8 @@ import com.villagebooker.dto.booking.AccommodationBookingRequest;
 import com.villagebooker.dto.booking.OwnerCancellationRequest;
 import com.villagebooker.dto.booking.TourBookingRequest;
 import com.villagebooker.dto.listing.UnavailablePeriodRequest;
+import com.villagebooker.dto.review.ReviewReplyRequest;
+import com.villagebooker.dto.review.ReviewRequest;
 import com.villagebooker.enums.listing.ListingStatus;
 import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.Listing;
@@ -18,6 +20,8 @@ import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtService;
 import com.villagebooker.service.listing.ListingLifecycleService;
 import com.villagebooker.service.listing.UnavailablePeriodService;
+import com.villagebooker.service.review.OwnerReviewService;
+import com.villagebooker.service.review.ReviewService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +52,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// Parallel requests for the same nights / places: exactly one may win (spec 5.0, 5.1).
+// Parallel requests for the same nights / places: exactly one may win (spec 5.0, 5.1). Reviews take the same listing
+// lock, so they are raced here too.
 // Not @Transactional: the threads must see each other's commits, so the data is committed and removed in @AfterEach.
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -82,6 +87,12 @@ class BookingConcurrencyTest {
     private ListingLifecycleService listingLifecycleService;
 
     @Autowired
+    private ReviewService reviewService;
+
+    @Autowired
+    private OwnerReviewService ownerReviewService;
+
+    @Autowired
     private JdbcTemplate jdbc;
 
     @Autowired
@@ -101,6 +112,7 @@ class BookingConcurrencyTest {
     @AfterEach
     void cleanUp() {
         for (Long id : listingIds) {
+            jdbc.update("delete from review where booking_id in (select id from booking where listing_id = ?)", id);
             jdbc.update("delete from booking where listing_id = ?", id);
             jdbc.update("delete from unavailable_period where listing_id = ?", id);
             jdbc.update("delete from tour_date where tour_id = ?", id);
@@ -198,6 +210,69 @@ class BookingConcurrencyTest {
                 });
 
         assertThat(results).containsExactlyInAnyOrder(true, false);
+    }
+
+    // the rating is recomputed under the listing lock: without it each review would count only itself
+    @Test
+    void twoReviewsAtOnceBothCountInTheRating() throws Exception {
+        Long listingId = approved(support.createAccommodation(owner));
+        Long firstGuest = guest();
+        Long secondGuest = guest();
+        Long first = completedBooking(firstGuest, listingId, 10);
+        Long second = completedBooking(secondGuest, listingId, 13);
+
+        List<Boolean> results = race(
+                () -> reviewService.create(firstGuest, first, new ReviewRequest(5, null)),
+                () -> reviewService.create(secondGuest, second, new ReviewRequest(2, null)));
+
+        assertThat(results).containsExactly(true, true);
+        assertThat(jdbc.queryForObject("select review_count from listing where id = ?", Integer.class, listingId))
+                .isEqualTo(2);
+        assertThat(jdbc.queryForObject("select rating from listing where id = ?", String.class, listingId))
+                .isEqualTo("3.50");
+    }
+
+    @Test
+    void doubleSubmittedReviewIsSavedOnce() throws Exception {
+        Long listingId = approved(support.createAccommodation(owner));
+        Long guestId = guest();
+        Long bookingId = completedBooking(guestId, listingId, 10);
+
+        List<Boolean> results = race(
+                () -> reviewService.create(guestId, bookingId, new ReviewRequest(5, null)),
+                () -> reviewService.create(guestId, bookingId, new ReviewRequest(5, null)));
+
+        assertThat(results).containsExactlyInAnyOrder(true, false);
+        assertThat(jdbc.queryForObject("select review_count from listing where id = ?", Integer.class, listingId))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void twoRepliesAtOnceOnlyOneIsSaved() throws Exception {
+        Long listingId = approved(support.createAccommodation(owner));
+        Long ownerId = listingRepo.findById(listingId).orElseThrow().getOwner().getId();
+        Long guestId = guest();
+        Long reviewId = reviewService.create(guestId, completedBooking(guestId, listingId, 10),
+                new ReviewRequest(3, null)).id();
+
+        List<Boolean> results = race(
+                () -> ownerReviewService.reply(ownerId, reviewId, new ReviewReplyRequest("Prvi odgovor")),
+                () -> ownerReviewService.reply(ownerId, reviewId, new ReviewReplyRequest("Drugi odgovor")));
+
+        assertThat(results).containsExactlyInAnyOrder(true, false);
+        assertThat(jdbc.queryForObject("select owner_reply from review where id = ?", String.class, reviewId))
+                .isIn("Prvi odgovor", "Drugi odgovor");
+    }
+
+    // booked for future nights, then written as a stay that ended yesterday
+    private Long completedBooking(Long guestId, Long listingId, int daysAhead) {
+        LocalDate arrival = AppTime.today(clock).plusDays(daysAhead);
+        Long bookingId = bookingService.createAccommodation(guestId,
+                new AccommodationBookingRequest(listingId, arrival, arrival.plusDays(2), 2, null)).id();
+        LocalDate yesterday = AppTime.today(clock).minusDays(1);
+        jdbc.update("update booking set status = 'COMPLETED', expires_at = null, start_date = ?, end_date = ? where id = ?",
+                yesterday.minusDays(1), yesterday, bookingId);
+        return bookingId;
     }
 
     // Starts all tasks at the same moment; true = succeeded, false = rejected: 4xx from a check, or the

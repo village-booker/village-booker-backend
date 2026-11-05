@@ -27,11 +27,17 @@ public class Review {
     @Column(name = "rating", nullable = false)
     private Integer rating;
 
-    @Column(name = "comment")
+    @Column(name = "comment", length = 2000)
     private String comment;
 
-    @Column(name = "owner_reply")
+    @Column(name = "owner_reply", length = 2000)
     private String ownerReply;
+
+    @Column(name = "owner_reply_at")
+    private Instant ownerReplyAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

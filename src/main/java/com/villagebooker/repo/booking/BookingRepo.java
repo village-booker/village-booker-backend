@@ -37,6 +37,10 @@ public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"listing", "guest"})
     Optional<Booking> findByIdAndListingOwnerId(Long id, Long ownerId);
 
+    // only the id, so the listing lock is the first load of the listing in the transaction
+    @Query("select b.listing.id from Booking b where b.id = :id and b.guest.id = :guestId")
+    Optional<Long> findListingIdByIdAndGuestId(@Param("id") Long id, @Param("guestId") Long guestId);
+
     // accommodation availability: closed intervals [start, end] overlap (spec 1.2); tour bookings are excluded
     @Query("""
             select case when count(b) > 0 then true else false end

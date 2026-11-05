@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/features", "/api/listings", "/api/listings/*",
-                                "/api/listings/*/availability").permitAll()
+                                "/api/listings/*/availability", "/api/listings/*/reviews").permitAll()
                         .requestMatchers("/error").permitAll()
                         // fine-grained checks (roles, ownership) are done with @PreAuthorize and in services
                         .anyRequest().authenticated())

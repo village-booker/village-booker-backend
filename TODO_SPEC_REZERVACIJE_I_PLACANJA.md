@@ -345,6 +345,8 @@ Hard delete (red se stvarno brise):
 
 Nikad se ne brisu: `Rezervacija`, `Placanje`, `Recenzija`, `UslugaIstorijaStatusa`, `ZahtevZaIzmenuUsluge`.
 
+`Recenzija` koju admin ukloni (uvredljiva, lazna) ostaje kao red sa `deleted_at`: skrivena je svuda osim kod admina i ne racuna se u `ocena` / `brojRecenzija`.
+
 ### 9.2 Vlasnik otkazuje jednu rezervaciju (ili termin ture)
 
 - Dozvoljeno iz aktivnih statusa: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`.
@@ -443,7 +445,7 @@ Sledece:
    - [x] pauziranje i brisanje usluge (9.3)
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
-7. Recenzije (preracun `rating` / `reviewCount`), omiljene, nedostupni periodi.
+7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi. Prijava recenzije adminu: kasnije.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.
 
 Testovi uz svaki korak:
