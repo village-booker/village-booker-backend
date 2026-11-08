@@ -10,6 +10,8 @@ public interface PaymentRepo extends JpaRepository<Payment, Long> {
 
     List<Payment> findByBookingId(Long bookingId);
 
+    List<Payment> findByBookingIdOrderById(Long bookingId);
+
     // for the future Stripe webhook
     Optional<Payment> findByStripePaymentId(String stripePaymentId);
 }

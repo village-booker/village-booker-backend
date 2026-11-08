@@ -1,5 +1,6 @@
 package com.villagebooker.repo.booking;
 
+import com.villagebooker.dto.booking.OwnerCancellationStatsResponse;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.model.Booking;
 import org.springframework.data.domain.Page;
@@ -17,7 +18,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-// JpaSpecificationExecutor: the owner's list with optional filters (status, listing)
+// JpaSpecificationExecutor: the owner's and the admin's lists with optional filters (status, listing, guest, owner)
 public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificationExecutor<Booking> {
 
     // listing (and guest) loaded in the same query, otherwise mapping to DTO makes N+1 queries
@@ -27,9 +28,13 @@ public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"listing", "guest"})
     Page<Booking> findByListingOwnerId(Long ownerId, Pageable pageable);
 
+    // listing.owner for the admin's list (for the host's own list it is the host, one row)
     @Override
-    @EntityGraph(attributePaths = {"listing", "guest"})
+    @EntityGraph(attributePaths = {"listing", "listing.owner", "guest"})
     Page<Booking> findAll(Specification<Booking> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"listing", "listing.owner", "guest"})
+    Optional<Booking> findWithPartiesById(Long id);
 
     @EntityGraph(attributePaths = "listing")
     Optional<Booking> findByIdAndGuestId(Long id, Long guestId);
@@ -84,6 +89,27 @@ public interface BookingRepo extends JpaRepository<Booking, Long>, JpaSpecificat
     // bookings of a listing that have not begun yet (deleting the listing cancels them)
     List<Booking> findByListingIdAndStatusInAndStartDateAfterOrderByStartDate(
             Long listingId, Collection<BookingStatus> statuses, LocalDate today);
+
+    long countByGuestId(Long guestId);
+
+    long countByListingOwnerIdAndStatus(Long ownerId, BookingStatus status);
+
+    // spec 9.4: hosts by the number of their cancellations since a moment, most first (penalties are decided by hand)
+    @Query(value = """
+            select new com.villagebooker.dto.booking.OwnerCancellationStatsResponse(
+                o.id, o.firstName, o.lastName, o.email, count(b), max(b.cancelledAt))
+            from Booking b join b.listing l join l.owner o
+            where b.status = com.villagebooker.enums.booking.BookingStatus.CANCELLED_BY_OWNER
+              and b.cancelledAt >= :since
+            group by o.id, o.firstName, o.lastName, o.email
+            order by count(b) desc, o.id
+            """,
+            countQuery = """
+            select count(distinct b.listing.owner.id) from Booking b
+            where b.status = com.villagebooker.enums.booking.BookingStatus.CANCELLED_BY_OWNER
+              and b.cancelledAt >= :since
+            """)
+    Page<OwnerCancellationStatsResponse> countOwnerCancellationsSince(@Param("since") Instant since, Pageable pageable);
 
     List<Booking> findByTourDateIdAndStatusIn(Long tourDateId, Collection<BookingStatus> statuses);
 }

@@ -24,4 +24,6 @@ public interface ListingRepo extends JpaRepository<Listing, Long>, JpaSpecificat
     Page<Listing> findByStatus(ListingStatus status, Pageable pageable);
 
     Page<Listing> findByOwnerIdAndStatusNot(Long ownerId, ListingStatus status, Pageable pageable);
+
+    long countByOwnerIdAndStatusNot(Long ownerId, ListingStatus status);
 }

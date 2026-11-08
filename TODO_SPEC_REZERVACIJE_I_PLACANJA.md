@@ -390,7 +390,7 @@ Sistem samo cuva podatke na osnovu kojih admin odlucuje:
 
 - broj rezervacija u statusu `OTKAZANO_VLASNIK` po vlasniku (izvodi se upitom, nista novo u modelu)
 - (opciono) `Rezervacija.otkazanoAt` (`Instant`) i `razlogOtkazivanja` (`String`) - da se vidi koliko pre dolaska je otkazano i zasto
-- admin pregled: lista vlasnika sa brojem otkazivanja u poslednjih N meseci
+- admin pregled: lista vlasnika sa brojem otkazivanja u poslednjih N meseci (uradjeno: `GET /api/admin/bookings/owner-cancellations?months=`, plus `ownerCancellationCount` u `GET /api/admin/users/{id}`)
 
 Kasnije (v2), ako se uvede automatika: pravila penala na nivou platforme (npr. otkazivanje < 7 dana pre dolaska -> X% vrednosti rezervacije), entitet `Penal` (vlasnik, rezervacija, iznos, status) i naplata preko Stripe Connect. Pre toga mora biti resen tok novca platforma <-> vlasnik.
 
@@ -446,6 +446,7 @@ Sledece:
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
 7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi. Prijava recenzije adminu: kasnije.
+   - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4). Blokiranje / brisanje naloga i admin izmena rezervacije: posle odluke tima.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.
 
 Testovi uz svaki korak:

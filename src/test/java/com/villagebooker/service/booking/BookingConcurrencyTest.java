@@ -167,7 +167,7 @@ class BookingConcurrencyTest {
         }
 
         // 12 places: two groups of 5 fit, the third does not
-        assertThat(race(bookings.toArray(Callable[]::new))).containsExactlyInAnyOrder(true, true, false);
+        assertThat(race(bookings)).containsExactlyInAnyOrder(true, true, false);
         assertThat(jdbc.queryForObject("select booked_count from tour_date where id = ?", Integer.class, dateId))
                 .isEqualTo(10);
     }
@@ -279,8 +279,12 @@ class BookingConcurrencyTest {
     // @Version / CHECK of the row that the other transaction changed first (also a 409 for the client).
     @SafeVarargs
     private static List<Boolean> race(Callable<Object>... tasks) throws Exception {
+        return race(List.of(tasks));
+    }
+
+    private static List<Boolean> race(List<Callable<Object>> tasks) throws Exception {
         CountDownLatch start = new CountDownLatch(1);
-        ExecutorService pool = Executors.newFixedThreadPool(tasks.length);
+        ExecutorService pool = Executors.newFixedThreadPool(tasks.size());
         try {
             List<Future<Boolean>> futures = new ArrayList<>();
             for (Callable<Object> task : tasks) {
