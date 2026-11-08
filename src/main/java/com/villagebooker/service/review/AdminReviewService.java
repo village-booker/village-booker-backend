@@ -2,6 +2,7 @@ package com.villagebooker.service.review;
 
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.dto.review.ReviewResponse;
+import com.villagebooker.enums.review.ReviewReportStatus;
 import com.villagebooker.model.Listing;
 import com.villagebooker.model.Review;
 import com.villagebooker.repo.listing.ListingRepo;
@@ -24,6 +25,7 @@ public class AdminReviewService {
     private final ReviewRepo reviewRepo;
     private final ListingRepo listingRepo;
     private final ListingRating listingRating;
+    private final ReviewReportService reviewReportService;
     private final Clock clock;
 
     // removed ones too, so the admin sees what was removed
@@ -35,8 +37,9 @@ public class AdminReviewService {
         return PageResponse.of(page, ReviewResponse::from);
     }
 
+    // pending reports of the review are closed as UPHELD
     @Transactional
-    public void delete(Long reviewId) {
+    public void delete(Long adminId, Long reviewId) {
         Long listingId = reviewRepo.findListingIdById(reviewId)
                 .orElseThrow(() -> ReviewService.reviewNotFound(reviewId));
         Listing listing = listingRepo.findByIdForUpdate(listingId).orElseThrow();
@@ -45,6 +48,7 @@ public class AdminReviewService {
             review.setDeletedAt(Instant.now(clock));
             listingRating.recompute(listing);
         }
+        reviewReportService.resolve(adminId, reviewId, ReviewReportStatus.UPHELD);
     }
 
     // the host may reply again afterward

@@ -3,9 +3,12 @@ package com.villagebooker.controller.review;
 import com.villagebooker.controller.common.Paging;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.dto.review.PublicReviewResponse;
+import com.villagebooker.dto.review.ReviewReportRequest;
+import com.villagebooker.dto.review.ReviewReportResponse;
 import com.villagebooker.dto.review.ReviewRequest;
 import com.villagebooker.dto.review.ReviewResponse;
 import com.villagebooker.security.AuthUser;
+import com.villagebooker.service.review.ReviewReportService;
 import com.villagebooker.service.review.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final ReviewReportService reviewReportService;
+
+    // to the admin: an offensive or false review (also by the listing's host)
+    @PostMapping("/api/reviews/{reviewId}/reports")
+    @PreAuthorize("hasRole('USER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReviewReportResponse report(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long reviewId,
+                                       @Valid @RequestBody ReviewReportRequest request) {
+        return reviewReportService.report(authUser.id(), reviewId, request);
+    }
 
     @PostMapping("/api/bookings/{bookingId}/review")
     @PreAuthorize("hasRole('USER')")

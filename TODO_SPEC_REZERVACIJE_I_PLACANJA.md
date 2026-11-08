@@ -448,7 +448,7 @@ Sledece:
    - [x] pauziranje i brisanje usluge (9.3)
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
-7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi. Prijava recenzije adminu: kasnije.
+7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi, prijava recenzije adminu (`ReviewReport`: korisnik prijavljuje, admin uklanja recenziju ili odbacuje prijave).
    - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4).
    - [x] Blokada korisnika (vazi odmah, i za vec izdate tokene), admin uklanja uslugu (`UKLONJENA_ADMIN`), brisanje usluge bez otkazivanja rezervacija (9.3). Brisanje naloga, sudbina oglasa blokiranog domacina i admin izmena rezervacije: posle odluke tima.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.

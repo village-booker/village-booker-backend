@@ -155,7 +155,8 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - Recenzija (`ReviewService`, `ReviewController`): gost `POST /api/bookings/{bookingId}/review` sa `rating` (1..5) i opcionim `comment` (do 2000, prazan = bez komentara), `GET /api/bookings/{bookingId}/review` (svoja). Samo za svoju rezervaciju (tuđa -> 404 `BOOKING_NOT_FOUND`), samo `COMPLETED` (inače 409 `REVIEW_NOT_ALLOWED`), jedna po rezervaciji (409 `REVIEW_ALREADY_EXISTS`), najkasnije 14 dana od dana posle poslednjeg zauzetog datuma, uključujući taj dan (`ReviewService.lastReviewDay`, inače 409 `REVIEW_PERIOD_OVER` sa `params.lastDay`). Gost ne menja i ne briše recenziju.
 - Javno, bez tokena: `GET /api/listings/{id}/reviews` (najnovije prvo, `PublicReviewResponse`: gost samo ime i slika), za oglase iz `PublicListingService.VISIBLE` (`APPROVED`, `PAUSED_BY_OWNER`).
 - Domaćin (`/api/owner/reviews`, `hasRole('OWNER')`): `GET ?listingId=` (recenzije njegovih oglasa), `POST /{id}/reply` sa `reply` (do 2000): jedan javni odgovor, bez izmene (409 `REVIEW_ALREADY_REPLIED`, uslovni `update` u `ReviewRepo.replyIfAbsent`); tuđa recenzija -> 404 `REVIEW_NOT_FOUND`.
-- Admin (`/api/admin/reviews`, `hasRole('ADMIN')`): `GET ?listingId=` (i uklonjene), `DELETE /{id}` (red ostaje sa `deletedAt`, skriven svuda, ne računa se u ocenu, gost ne može da napiše novu; ponovni poziv ne menja ništa), `DELETE /{id}/reply` (domaćin posle može ponovo da odgovori). Prijava recenzije adminu je za kasnije.
+- Admin (`/api/admin/reviews`, `hasRole('ADMIN')`): `GET ?listingId=` (i uklonjene), `DELETE /{id}` (red ostaje sa `deletedAt`, skriven svuda, ne računa se u ocenu, gost ne može da napiše novu; ponovni poziv ne menja ništa), `DELETE /{id}/reply` (domaćin posle može ponovo da odgovori).
+- Prijava recenzije (`ReviewReportService`, `ReviewReport`): svaki prijavljen korisnik, i domaćin oglasa, `POST /api/reviews/{reviewId}/reports` sa `reason` (do 1000, 201). Samo recenzija koju vidi javnost (nije uklonjena, oglas iz `VISIBLE`, inače 404 `REVIEW_NOT_FOUND`), ne svoja (400 `CANNOT_REPORT_OWN_REVIEW`), jednom po korisniku i recenziji i posle odluke (409 `REVIEW_ALREADY_REPORTED`, `UNIQUE (review_id, reporter_id)`). Admin: `GET /api/admin/reviews/reported` (recenzije sa prijavama `PENDING`, najduže čeka prva, uz broj i razloge prijava; bez uklonjenih recenzija i recenzija obrisanih / uklonjenih oglasa), `POST /{id}/reports/dismiss` (recenzija ostaje, prijave `DISMISSED`; bez prijava na čekanju -> 409 `REVIEW_NOT_REPORTED`), a `DELETE /{id}` prijave zatvara kao `UPHELD`. Odluka je jedan `update` svih prijava te recenzije (`resolvedAt`, `resolvedBy`).
 - `Listing.rating` / `reviewCount` se uvek preračunavaju iz recenzija bez `deletedAt` (`ListingRating`, prosek `HALF_UP` na 2 decimale), pod lockom oglasa. Posle locka ide `refresh` oglasa, jer follow-on locking pročita red pre čekanja na lock, pa bi druga recenzija pala na `@Version` (dokaz: `BookingConcurrencyTest`).
 - Omiljeni (`FavoriteService`, `/api/users/me/favorites`, svaki prijavljen korisnik): `PUT /{listingId}` i `DELETE /{listingId}` (204, oba idempotentna; dodavanje je `insert ... on conflict do nothing`), `GET` (najnovije dodati prvi, `FavoriteResponse` = kartica oglasa + `bookable` + `addedAt`), `GET /ids?listingIds=` (koji su od datih, do 100, sačuvani; za srca na strani pretrage). Dodaje se samo oglas iz `VISIBLE` (inače 404), a obrisan ili odbijen oglas ispada iz liste.
 
@@ -175,6 +176,12 @@ Spoljne stvari i integracije rade se na kraju, kad je sav ostali posao gotov: me
 ## Otvorene odluke (ne implementirati bez dogovora tima)
 
 Okrug kao šifarnik, naziv kapara ili avans, online plaćanje i provajder, plan i provizija domaćina, verifikacija telefona. Trenutno stanje je u planskom dokumentu.
+
+Iz rada na adminu (novembar 2026):
+
+- Oglasi blokiranog domaćina: sada ostaju u pretrazi i primaju zahteve, a domaćin ne može da ih odobri, pa zahtevi ističu posle 24h. Predlog: ne prikazivati ih u pretrazi i ne primati nove rezervacije dok je domaćin blokiran, a postojeće rezervacije važe.
+- Brisanje naloga: šta biva sa ličnim podacima, recenzijama, oglasima i rezervacijama.
+- Admin rešava započet boravak (spec: "rešava admin"): pravila povrata novca i nov status ili ne.
 
 ## Git
 

@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepo extends JpaRepository<Review, Long> {
@@ -25,6 +27,9 @@ public interface ReviewRepo extends JpaRepository<Review, Long> {
 
     @EntityGraph(attributePaths = {"booking", "booking.listing", "booking.guest"})
     Optional<Review> findWithBookingById(Long id);
+
+    @EntityGraph(attributePaths = {"booking", "booking.listing", "booking.guest"})
+    List<Review> findByIdIn(Collection<Long> ids);
 
     @EntityGraph(attributePaths = {"booking", "booking.listing", "booking.guest"})
     Optional<Review> findByIdAndBookingListingOwnerIdAndDeletedAtIsNull(Long id, Long ownerId);
