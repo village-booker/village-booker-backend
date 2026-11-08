@@ -8,12 +8,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
+
 public interface ListingChangeRequestRepo extends JpaRepository<ListingChangeRequest, Long> {
 
-    // admin queue, e.g. status = PENDING, without deleted listings; listing and requester are mapped into the response
+    // admin queue, e.g. status = PENDING, without deleted / removed listings; listing and requester are mapped into the response
     @EntityGraph(attributePaths = {"listing", "requester"})
-    Page<ListingChangeRequest> findByStatusAndListingStatusNot(ChangeRequestStatus status, ListingStatus listingStatus,
-                                                               Pageable pageable);
+    Page<ListingChangeRequest> findByStatusAndListingStatusNotIn(ChangeRequestStatus status,
+                                                                 Collection<ListingStatus> listingStatuses,
+                                                                 Pageable pageable);
 
     @EntityGraph(attributePaths = {"listing", "requester"})
     Page<ListingChangeRequest> findByListingId(Long listingId, Pageable pageable);

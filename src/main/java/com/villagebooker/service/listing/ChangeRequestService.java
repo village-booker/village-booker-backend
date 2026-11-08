@@ -81,7 +81,7 @@ public class ChangeRequestService {
 
     @Transactional(readOnly = true)
     public PageResponse<ChangeRequestResponse> findByStatus(ChangeRequestStatus status, Pageable pageable) {
-        return PageResponse.of(changeRequestRepo.findByStatusAndListingStatusNot(status, ListingStatus.DELETED, pageable), this::toResponse);
+        return PageResponse.of(changeRequestRepo.findByStatusAndListingStatusNotIn(status, ListingStatus.CLOSED, pageable), this::toResponse);
     }
 
     @Transactional(readOnly = true)

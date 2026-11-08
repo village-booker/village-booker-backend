@@ -47,6 +47,7 @@ public class UnavailablePeriodService {
                 .map(l -> (Listing) Hibernate.unproxy(l))
                 .orElseThrow(() -> OwnerListingService.listingNotFound(listingId));
         OwnerListingService.checkOwner(listing, ownerId);
+        OwnerListingService.checkNotRemoved(listing);
         requireAccommodation(listing);
 
         LocalDate start = request.startDate();

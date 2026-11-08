@@ -46,7 +46,7 @@ Enumi:
 |---|---|
 | `StatusRezervacije`: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`, `ODBIJENO`, `ISTEKLO`, `OTKAZANO_KORISNIK`, `OTKAZANO_VLASNIK`, `OTKAZANO_NEDOVOLJNO_PRIJAVA`, `ZAVRSENO` | `BookingStatus`: `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT`, `CONFIRMED`, `REJECTED`, `EXPIRED`, `CANCELLED_BY_GUEST`, `CANCELLED_BY_OWNER`, `CANCELLED_MIN_NOT_REACHED`, `COMPLETED` |
 | `StatusTermina`: `OTVOREN`, `POTVRDJEN`, `POPUNJEN`, `OTKAZAN`, `ZAVRSEN` | `TourDateStatus`: `OPEN`, `CONFIRMED`, `FULL`, `CANCELLED`, `COMPLETED` |
-| `StatusUsluge`: `NA_CEKANJU`, `ODOBRENA`, `ODBIJENO`, `PAUZIRANA_VLASNIK`, `OBRISANA` | `ListingStatus`: `PENDING`, `APPROVED`, `REJECTED`, `PAUSED_BY_OWNER`, `DELETED` |
+| `StatusUsluge`: `NA_CEKANJU`, `ODOBRENA`, `ODBIJENO`, `PAUZIRANA_VLASNIK`, `OBRISANA`, `UKLONJENA_ADMIN` | `ListingStatus`: `PENDING`, `APPROVED`, `REJECTED`, `PAUSED_BY_OWNER`, `DELETED`, `REMOVED_BY_ADMIN` |
 | `StatusPlacanja`: `NA_CEKANJU`, `USPESNO`, `NEUSPESNO`, `REFUNDIRANO` | `PaymentStatus`: `PENDING`, `SUCCEEDED`, `FAILED`, `REFUNDED` |
 | `StatusZahteva`: `NA_CEKANJU`, `ODOBREN`, `ODBIJEN` | `ChangeRequestStatus`: `PENDING`, `APPROVED`, `REJECTED` |
 | `PolitikaOtkazivanja`: `BESPLATNO`, `PARCIJALNO`, `BEZ_POVRATA` | `CancellationPolicy`: `FREE`, `PARTIAL`, `NON_REFUNDABLE` |
@@ -332,6 +332,7 @@ Soft delete postoji **samo za `Usluga`**, preko statusa: `status = OBRISANA`. Ne
   - "moje usluge" kod vlasnika: `status <> OBRISANA`
   - rezervacije / placanja / recenzije: bez filtera, istorija ostaje citljiva
 - `OBRISANA` je konacan status: nema prelaza iz njega, nove rezervacije se odbijaju.
+- `UKLONJENA_ADMIN` (`REMOVED_BY_ADMIN`, odluka tima, novembar 2026): admin uklanja uslugu u bilo kom statusu osim `OBRISANA`, sa razlogom koji vlasnik vidi. Konacan status: nije u pretrazi, nove rezervacije se odbijaju, a postojece vaze i normalno se zavrsavaju (nista se ne otkazuje). Vlasnik je i dalje vidi, ne dodaje nista (slike, karakteristike, termini, nedostupni periodi), a sme da je obrise kad nema buducih rezervacija.
 
 Hard delete (red se stvarno brise):
 
@@ -358,6 +359,8 @@ Nikad se ne brisu: `Rezervacija`, `Placanje`, `Recenzija`, `UslugaIstorijaStatus
 
 ### 9.3 Vlasnik brise uslugu
 
+> **Izmena (odluka tima, novembar 2026):** brisanje nikad ne otkazuje rezervacije. Korak 2 ispod (`otkaziRezervacije=true`) je ukinut: dok usluga ima buducih aktivnih rezervacija, brisanje vraca `409`, vlasnik pauzira uslugu, rezervacije i dalje vaze, a usluga se brise kad prodju ili se rese sa adminom. Isto vazi i kad admin zeli da ukloni uslugu: ona postaje `UKLONJENA_ADMIN`, a rezervacije teku dalje (9.1). Tekst ispod je istorija prvog dizajna.
+
 Dva koraka, da vlasnik ne bi slucajno otkazao tudje rezervacije:
 
 1. `DELETE /usluge/{id}`
@@ -375,10 +378,10 @@ Alternativa za vlasnika koji ne mora odmah da obrise: `PAUZIRANA_VLASNIK` (nove 
 Implementacija (`ListingLifecycleService`, `/api/owner/listings`):
 
 - `POST /{id}/pause`: samo iz `ODOBRENA` -> `PAUZIRANA_VLASNIK`, inace `409 LISTING_NOT_PAUSABLE`. `POST /{id}/resume`: samo iz `PAUZIRANA_VLASNIK` -> `ODOBRENA`, bez admina (sadrzaj je vec odobren), inace `409 LISTING_NOT_PAUSED`.
-- `DELETE /{id}` i `DELETE /{id}?cancelBookings=true` (umesto `otkaziRezervacije`). `409 LISTING_HAS_ACTIVE_BOOKINGS` ima `params.activeBookings` (broj) i `params.bookingIds`.
+- `DELETE /{id}` (bez `cancelBookings`, vidi izmenu iznad). `409 LISTING_HAS_ACTIVE_BOOKINGS` ima `params.activeBookings` (broj) i `params.bookingIds`; nista se ne otkazuje.
 - Brise se iz svakog statusa osim `OBRISANA` (i `NA_CEKANJU`, `ODBIJENA`, `PAUZIRANA_VLASNIK`).
-- Otkazuju se samo aktivne rezervacije koje jos nisu pocele (`rezervacijaOd > danas`), bez razloga. Zapoceti boravak ili tura ostaje (odluka tima): oglas postaje `OBRISANA`, a rezervacija se normalno zavrsava (scheduler -> `ZAVRSENO`). Zato oglas sa samo zapocetim rezervacijama ne trazi potvrdu.
-- Tura: termini koji pocinju od sutra i nisu `OTKAZAN` / `ZAVRSEN` -> `OTKAZAN`; termin koji je u toku ostaje.
+- Brisanje blokiraju samo aktivne rezervacije koje jos nisu pocele (`rezervacijaOd > danas`). Zapoceti boravak ili tura ne smeta (odluka tima): oglas postaje `OBRISANA`, a rezervacija se normalno zavrsava (scheduler -> `ZAVRSENO`).
+- Tura: termini koji pocinju od sutra i nisu `OTKAZAN` / `ZAVRSEN` (tada bez aktivnih rezervacija) -> `OTKAZAN`; termin koji je u toku ostaje.
 - Svaka promena statusa se upisuje u `ListingStatusHistory` (`changedBy` = domacin).
 - Zahtevi za izmenu i slike obrisanog oglasa nestaju iz admin redova cekanja (`?status=PENDING`).
 
@@ -446,7 +449,8 @@ Sledece:
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
 6. Mejlovi preko dogadjaja posle commita (sekcija 14).
 7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi. Prijava recenzije adminu: kasnije.
-   - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4). Blokiranje / brisanje naloga i admin izmena rezervacije: posle odluke tima.
+   - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4).
+   - [x] Blokada korisnika (vazi odmah, i za vec izdate tokene), admin uklanja uslugu (`UKLONJENA_ADMIN`), brisanje usluge bez otkazivanja rezervacija (9.3). Brisanje naloga, sudbina oglasa blokiranog domacina i admin izmena rezervacije: posle odluke tima.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.
 
 Testovi uz svaki korak:

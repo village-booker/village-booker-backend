@@ -205,7 +205,7 @@ class BookingConcurrencyTest {
                 () -> bookingService.createAccommodation(guestId,
                         new AccommodationBookingRequest(listingId, d, d.plusDays(1), 2, null)),
                 () -> {
-                    listingLifecycleService.delete(ownerId, listingId, false);
+                    listingLifecycleService.delete(ownerId, listingId);
                     return null;
                 });
 

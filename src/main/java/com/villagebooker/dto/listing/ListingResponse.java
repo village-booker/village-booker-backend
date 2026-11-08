@@ -22,6 +22,8 @@ public record ListingResponse(
         ListingStatus status,
         // filled only while status = REJECTED
         String rejectionReason,
+        // filled only when status = REMOVED_BY_ADMIN
+        String removalReason,
         String name,
         String description,
         Integer minGuests,
@@ -84,6 +86,7 @@ public record ListingResponse(
                 type,
                 listing.getStatus(),
                 listing.getRejectionReason(),
+                listing.getRemovalReason(),
                 listing.getName(),
                 listing.getDescription(),
                 listing.getMinGuests(),

@@ -5,16 +5,13 @@ import com.villagebooker.config.TermsProperties;
 import com.villagebooker.controller.booking.BookingTestSupport;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.enums.listing.ListingStatus;
-import com.villagebooker.enums.payment.PaymentStatus;
 import com.villagebooker.enums.tour.TourDateStatus;
 import com.villagebooker.model.Booking;
 import com.villagebooker.model.ListingStatusHistory;
-import com.villagebooker.model.Payment;
 import com.villagebooker.model.TourDate;
 import com.villagebooker.repo.booking.BookingRepo;
 import com.villagebooker.repo.listing.ListingRepo;
 import com.villagebooker.repo.listing.ListingStatusHistoryRepo;
-import com.villagebooker.repo.payment.PaymentRepo;
 import com.villagebooker.repo.tour.TourDateRepo;
 import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtService;
@@ -50,7 +47,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// The host pauses, resumes and deletes own listings (spec 9.3).
+// The host pauses, resumes and deletes own listings (spec 9.3); deleting never cancels bookings.
 // Runs against the configured database; @Transactional rolls every test back, nothing stays in the DB.
 @SpringBootTest(properties = "app.payments.simulated=true")
 @AutoConfigureMockMvc
@@ -76,9 +73,6 @@ class ListingLifecycleFlowTest {
 
     @Autowired
     private TourDateRepo tourDateRepo;
-
-    @Autowired
-    private PaymentRepo paymentRepo;
 
     @Autowired
     private JwtService jwtService;
@@ -174,9 +168,9 @@ class ListingLifecycleFlowTest {
         pause(otherHost, listingId)
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("NOT_LISTING_OWNER"));
-        deleteListing(otherHost, listingId, false).andExpect(status().isForbidden());
+        deleteListing(otherHost, listingId).andExpect(status().isForbidden());
         pause(guest, listingId).andExpect(status().isForbidden());
-        deleteListing(guest, listingId, false).andExpect(status().isForbidden());
+        deleteListing(guest, listingId).andExpect(status().isForbidden());
         pause(owner, 999999999L)
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LISTING_NOT_FOUND"));
@@ -187,7 +181,7 @@ class ListingLifecycleFlowTest {
     void listingWithoutBookingsIsDeletedAtOnce() throws Exception {
         Long listingId = approved(support.createAccommodation(owner));
 
-        deleteListing(owner, listingId, false).andExpect(status().isNoContent());
+        deleteListing(owner, listingId).andExpect(status().isNoContent());
 
         assertThat(listingRepo.findById(listingId).orElseThrow().getStatus()).isEqualTo(ListingStatus.DELETED);
         assertThat(history(listingId).getLast().getNewStatus()).isEqualTo(ListingStatus.DELETED);
@@ -196,92 +190,76 @@ class ListingLifecycleFlowTest {
         mvc.perform(get("/api/listings/" + listingId)).andExpect(status().isNotFound());
         mvc.perform(get(OWNER).param("size", "100").header(HttpHeaders.AUTHORIZATION, "Bearer " + owner))
                 .andExpect(jsonPath("$.content[?(@.id == %d)]".formatted(listingId)).value(empty()));
-        deleteListing(owner, listingId, false).andExpect(status().isNotFound());
+        deleteListing(owner, listingId).andExpect(status().isNotFound());
         pause(owner, listingId).andExpect(status().isNotFound());
     }
 
     @Test
     void pendingAndPausedListingsCanBeDeletedToo() throws Exception {
         Long pending = support.createAccommodation(owner);
-        deleteListing(owner, pending, false).andExpect(status().isNoContent());
+        deleteListing(owner, pending).andExpect(status().isNoContent());
 
         Long paused = approved(support.createAccommodation(owner));
         pause(owner, paused).andExpect(status().isOk());
-        deleteListing(owner, paused, false).andExpect(status().isNoContent());
+        deleteListing(owner, paused).andExpect(status().isNoContent());
 
         assertThat(listingRepo.findById(pending).orElseThrow().getStatus()).isEqualTo(ListingStatus.DELETED);
         assertThat(listingRepo.findById(paused).orElseThrow().getStatus()).isEqualTo(ListingStatus.DELETED);
     }
 
     @Test
-    void upcomingBookingsNeedAConfirmationAndAreThenCancelledWithAFullRefund() throws Exception {
-        // free cancellation until 7 days before: 3 days before, a guest would get nothing back
+    void upcomingBookingsBlockTheDeletionAndNothingIsCancelled() throws Exception {
         Long listingId = approved(support.create(owner, "/accommodations", BookingTestSupport.depositJson()));
         LocalDate soon = today.plusDays(3);
         Long paid = bookings.bookApproved(guest, owner, listingId, soon, soon.plusDays(2), 2);
         bookings.pay(guest, paid).andExpect(jsonPath("$.status").value("CONFIRMED"));
-        Long request = bookings.book(support.userToken(), listingId, today.plusDays(20), today.plusDays(21), 2);
+        String secondGuest = support.userToken();
+        Long request = bookings.book(secondGuest, listingId, today.plusDays(20), today.plusDays(21), 2);
         Long declined = bookings.book(support.userToken(), listingId, today.plusDays(30), today.plusDays(31), 2);
         mvc.perform(post(BookingTestSupport.OWNER_BOOKINGS + "/" + declined + "/reject")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + owner)).andExpect(status().isOk());
 
-        deleteListing(owner, listingId, false)
+        deleteListing(owner, listingId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LISTING_HAS_ACTIVE_BOOKINGS"))
                 .andExpect(jsonPath("$.params.activeBookings").value(2))
                 .andExpect(jsonPath("$.params.bookingIds[0]").value(paid))
                 .andExpect(jsonPath("$.params.bookingIds[1]").value(request));
-        // nothing changed
+        // the old confirmation step is gone: the parameter changes nothing
+        mvc.perform(delete(OWNER + "/" + listingId).param("cancelBookings", "true")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + owner))
+                .andExpect(status().isConflict());
         assertThat(listingRepo.findById(listingId).orElseThrow().getStatus()).isEqualTo(ListingStatus.APPROVED);
         assertThat(statusOf(paid)).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(statusOf(request)).isEqualTo(BookingStatus.AWAITING_OWNER_APPROVAL);
 
-        deleteListing(owner, listingId, true).andExpect(status().isNoContent());
+        // the host pauses the listing; the bookings go on until they are over or settled
+        pause(owner, listingId).andExpect(status().isOk());
+        deleteListing(owner, listingId).andExpect(status().isConflict());
+        cancelAsGuest(guest, paid);
+        cancelAsGuest(secondGuest, request);
 
+        deleteListing(owner, listingId).andExpect(status().isNoContent());
         assertThat(listingRepo.findById(listingId).orElseThrow().getStatus()).isEqualTo(ListingStatus.DELETED);
-        for (Long id : List.of(paid, request)) {
-            Booking booking = bookingRepo.findById(id).orElseThrow();
-            assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED_BY_OWNER);
-            assertThat(booking.getCancelledAt()).isNotNull();
-            assertThat(booking.getCancellationReason()).isNull();
-            assertThat(booking.getExpiresAt()).isNull();
-        }
+        assertThat(statusOf(paid)).isEqualTo(BookingStatus.CANCELLED_BY_GUEST);
         assertThat(statusOf(declined)).isEqualTo(BookingStatus.REJECTED);
-        Payment payment = paymentRepo.findByBookingId(paid).getFirst();
-        // 30 % of 10000, all of it back: the host cancelled
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
-        assertThat(payment.getRefundAmount()).isEqualByComparingTo("3000");
-        // the guest still sees the booking of the deleted listing
-        mvc.perform(get(BookingTestSupport.BOOKINGS + "/" + paid).header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CANCELLED_BY_OWNER"));
     }
 
     @Test
-    void stayThatHasBegunStaysWhenTheListingIsDeleted() throws Exception {
+    void stayThatHasBegunDoesNotBlockTheDeletion() throws Exception {
         Long listingId = approved(support.createAccommodation(owner));
         Long current = bookings.bookApproved(guest, owner, listingId, today.plusDays(1), today.plusDays(3), 2);
         // the guest arrived yesterday and leaves tomorrow
         dates(current, today.minusDays(1), today);
-        Long upcoming = bookings.bookApproved(support.userToken(), owner, listingId,
-                today.plusDays(10), today.plusDays(11), 2);
+        String secondGuest = support.userToken();
+        Long upcoming = bookings.bookApproved(secondGuest, owner, listingId, today.plusDays(10), today.plusDays(11), 2);
 
-        deleteListing(owner, listingId, false)
+        deleteListing(owner, listingId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.params.activeBookings").value(1))
                 .andExpect(jsonPath("$.params.bookingIds[0]").value(upcoming));
-        deleteListing(owner, listingId, true).andExpect(status().isNoContent());
-
-        assertThat(statusOf(current)).isEqualTo(BookingStatus.CONFIRMED);
-        assertThat(statusOf(upcoming)).isEqualTo(BookingStatus.CANCELLED_BY_OWNER);
-    }
-
-    @Test
-    void onlyAStayThatHasBegunDoesNotNeedAConfirmation() throws Exception {
-        Long listingId = approved(support.createAccommodation(owner));
-        Long current = bookings.bookApproved(guest, owner, listingId, today.plusDays(1), today.plusDays(3), 2);
-        dates(current, today, today.plusDays(1));
-
-        deleteListing(owner, listingId, false).andExpect(status().isNoContent());
+        cancelAsGuest(secondGuest, upcoming);
+        deleteListing(owner, listingId).andExpect(status().isNoContent());
 
         assertThat(statusOf(current)).isEqualTo(BookingStatus.CONFIRMED);
         // the host still manages it
@@ -295,7 +273,6 @@ class ListingLifecycleFlowTest {
         Long tourId = approved(support.createTour(owner));
         Long booked = bookings.createDate(owner, tourId, today.plusDays(10));
         Long first = idOf(bookings.bookTour(guest, booked, 2).andExpect(status().isCreated()));
-        Long second = idOf(bookings.bookTour(support.userToken(), booked, 3).andExpect(status().isCreated()));
         Long empty = bookings.createDate(owner, tourId, today.plusDays(20));
         Long running = bookings.createDate(owner, tourId, today.plusDays(30));
         Long onTour = idOf(bookings.bookTour(support.userToken(), running, 2).andExpect(status().isCreated()));
@@ -307,16 +284,15 @@ class ListingLifecycleFlowTest {
         tourDateRepo.saveAndFlush(date);
         dates(onTour, today.minusDays(1), today);
 
-        deleteListing(owner, tourId, false)
+        deleteListing(owner, tourId)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.params.activeBookings").value(2));
-        deleteListing(owner, tourId, true).andExpect(status().isNoContent());
+                .andExpect(jsonPath("$.params.activeBookings").value(1));
+        cancelAsGuest(guest, first);
+        deleteListing(owner, tourId).andExpect(status().isNoContent());
 
         assertDate(booked, 0, TourDateStatus.CANCELLED);
         assertDate(empty, 0, TourDateStatus.CANCELLED);
         assertDate(running, 2, TourDateStatus.CONFIRMED);
-        assertThat(statusOf(first)).isEqualTo(BookingStatus.CANCELLED_BY_OWNER);
-        assertThat(statusOf(second)).isEqualTo(BookingStatus.CANCELLED_BY_OWNER);
         assertThat(statusOf(onTour)).isEqualTo(BookingStatus.CONFIRMED);
     }
 
@@ -335,7 +311,7 @@ class ListingLifecycleFlowTest {
         inQueue(ADMIN_CHANGE_REQUESTS, requestId).andExpect(jsonPath(itemPath(requestId)).value(not(empty())));
         inQueue(ADMIN_IMAGES, imageId).andExpect(jsonPath(itemPath(imageId)).value(not(empty())));
 
-        deleteListing(owner, listingId, false).andExpect(status().isNoContent());
+        deleteListing(owner, listingId).andExpect(status().isNoContent());
 
         inQueue(ADMIN_CHANGE_REQUESTS, requestId).andExpect(jsonPath(itemPath(requestId)).value(empty()));
         inQueue(ADMIN_IMAGES, imageId).andExpect(jsonPath(itemPath(imageId)).value(empty()));
@@ -354,10 +330,14 @@ class ListingLifecycleFlowTest {
         return mvc.perform(post(OWNER + "/" + listingId + "/resume").header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
     }
 
-    private ResultActions deleteListing(String token, Long listingId, boolean cancelBookings) throws Exception {
-        return mvc.perform(delete(OWNER + "/" + listingId)
-                .param("cancelBookings", String.valueOf(cancelBookings))
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    private ResultActions deleteListing(String token, Long listingId) throws Exception {
+        return mvc.perform(delete(OWNER + "/" + listingId).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    }
+
+    private void cancelAsGuest(String token, Long bookingId) throws Exception {
+        mvc.perform(post(BookingTestSupport.BOOKINGS + "/" + bookingId + "/cancel")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     private ResultActions inQueue(String path, Long id) throws Exception {

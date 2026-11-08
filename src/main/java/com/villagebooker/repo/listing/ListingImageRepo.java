@@ -35,8 +35,8 @@ public interface ListingImageRepo extends JpaRepository<ListingImage, Long> {
         String getUrl();
     }
 
-    // admin queue of images waiting for review, without deleted listings; the listing is mapped into the response
+    // admin queue of images waiting for review, without deleted / removed listings; the listing is mapped into the response
     @EntityGraph(attributePaths = "listing")
-    Page<ListingImage> findByStatusAndListingStatusNot(ImageStatus status, ListingStatus listingStatus,
-                                                       Pageable pageable);
+    Page<ListingImage> findByStatusAndListingStatusNotIn(ImageStatus status, Collection<ListingStatus> listingStatuses,
+                                                         Pageable pageable);
 }

@@ -41,6 +41,11 @@ public class SecurityProblemHandler implements AuthenticationEntryPoint, AccessD
         write(response, request, HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, "Access denied.");
     }
 
+    // a valid token of a user the admin has blocked (JwtAuthFilter)
+    public void userBlocked(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        write(response, request, HttpStatus.FORBIDDEN, ErrorCode.USER_BLOCKED, "This account is blocked.");
+    }
+
     private void write(HttpServletResponse response, HttpServletRequest request,
                        HttpStatus status, ErrorCode code, String detail) throws IOException {
         Map<String, Object> body = new LinkedHashMap<>();

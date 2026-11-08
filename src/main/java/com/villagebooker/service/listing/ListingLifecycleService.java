@@ -14,7 +14,6 @@ import com.villagebooker.model.TourDate;
 import com.villagebooker.repo.booking.BookingRepo;
 import com.villagebooker.repo.listing.ListingRepo;
 import com.villagebooker.repo.tour.TourDateRepo;
-import com.villagebooker.service.booking.BookingCanceller;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
@@ -38,7 +37,6 @@ public class ListingLifecycleService {
     private final ListingRepo listingRepo;
     private final BookingRepo bookingRepo;
     private final TourDateRepo tourDateRepo;
-    private final BookingCanceller bookingCanceller;
     private final ListingStatusHistoryWriter historyWriter;
     private final Clock clock;
 
@@ -66,22 +64,20 @@ public class ListingLifecycleService {
         return ListingResponse.from(listing);
     }
 
-    // Two steps, so the host does not cancel guests' bookings by accident: without cancelBookings, upcoming bookings
-    // refuse the deletion (409 with their ids); with it, they are cancelled by the host (full refund, spec 9.2) and
-    // upcoming tour dates are cancelled. A stay or tour that has already begun stays and ends as usual.
+    // Deleting never cancels bookings (team decision): with upcoming bookings the host gets 409 with their ids, pauses
+    // the listing and deletes it once they are over or settled with the admin. A stay or tour that has already begun
+    // does not block the deletion and ends as usual. Upcoming tour dates (then without active bookings) are cancelled.
     @Transactional
-    public void delete(Long ownerId, Long listingId, boolean cancelBookings) {
+    public void delete(Long ownerId, Long listingId) {
         Listing listing = lockOwn(ownerId, listingId);
         LocalDate today = AppTime.today(clock);
         List<Booking> upcoming = bookingRepo.findByListingIdAndStatusInAndStartDateAfterOrderByStartDate(
                 listingId, BookingStatus.ACTIVE, today);
-        if (!upcoming.isEmpty() && !cancelBookings) {
+        if (!upcoming.isEmpty()) {
             throw new ConflictException(ErrorCode.LISTING_HAS_ACTIVE_BOOKINGS,
-                    "Listing " + listingId + " has " + upcoming.size() + " upcoming bookings; deleting it cancels them.",
+                    "Listing " + listingId + " has " + upcoming.size()
+                            + " upcoming bookings; pause it and delete it once they are over.",
                     Map.of("activeBookings", upcoming.size(), "bookingIds", upcoming.stream().map(Booking::getId).toList()));
-        }
-        for (Booking booking : upcoming) {
-            bookingCanceller.cancel(booking, BookingStatus.CANCELLED_BY_OWNER, null);
         }
         if (listing instanceof Tour) {
             for (TourDate date : tourDateRepo.findByTourIdAndStartDateGreaterThanEqualOrderByStartDate(

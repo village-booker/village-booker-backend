@@ -12,11 +12,13 @@ public record AdminUserSummaryResponse(
         String lastName,
         String imageUrl,
         Role role,
-        Instant createdAt
+        Instant createdAt,
+        // null = not blocked
+        Instant blockedAt
 ) {
 
     public static AdminUserSummaryResponse from(User user) {
         return new AdminUserSummaryResponse(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(),
-                user.getImageUrl(), user.getRole(), user.getCreatedAt());
+                user.getImageUrl(), user.getRole(), user.getCreatedAt(), user.getBlockedAt());
     }
 }

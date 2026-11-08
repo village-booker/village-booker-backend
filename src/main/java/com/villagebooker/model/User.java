@@ -78,4 +78,12 @@ public class User {
 
     @Column(name = "host_terms_accepted_at")
     private Instant hostTermsAcceptedAt;
+
+    // set by the admin; a blocked user can neither log in nor use an earlier token (JwtAuthFilter)
+    @Column(name = "blocked_at")
+    private Instant blockedAt;
+
+    // seen only by admins
+    @Column(name = "block_reason", length = 1000)
+    private String blockReason;
 }

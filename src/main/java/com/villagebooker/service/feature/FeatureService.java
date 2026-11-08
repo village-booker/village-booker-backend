@@ -74,6 +74,7 @@ public class FeatureService {
     @Transactional
     public ListingResponse setListingFeatures(Long ownerId, Long listingId, ListingFeaturesRequest request) {
         Listing listing = ownerListingService.findOwn(ownerId, listingId);
+        OwnerListingService.checkNotRemoved(listing);
         Set<Long> ids = new LinkedHashSet<>(request.featureIds());
         List<Feature> features = featureRepo.findByIdIn(ids);
         if (features.size() != ids.size()) {

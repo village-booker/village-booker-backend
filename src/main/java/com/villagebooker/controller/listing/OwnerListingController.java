@@ -144,13 +144,11 @@ public class OwnerListingController {
         return listingLifecycleService.resume(authUser.id(), id);
     }
 
-    // first without cancelBookings; 409 LISTING_HAS_ACTIVE_BOOKINGS lists what would be cancelled, then again with
-    // cancelBookings=true once the host confirms
+    // 409 LISTING_HAS_ACTIVE_BOOKINGS while bookings that have not begun exist; nothing is cancelled
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
-                       @RequestParam(defaultValue = "false") boolean cancelBookings) {
-        listingLifecycleService.delete(authUser.id(), id, cancelBookings);
+    public void delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
+        listingLifecycleService.delete(authUser.id(), id);
     }
 
     @GetMapping

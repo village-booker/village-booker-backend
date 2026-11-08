@@ -2,6 +2,7 @@ package com.villagebooker.config;
 
 import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.User;
+import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +12,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,9 +25,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// Checks the real security chain with real tokens; no users are written to the database.
+// Checks the real security chain with real tokens. The filter looks the user up in the database, so each token
+// belongs to a saved user; @Transactional rolls them back.
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class SecurityRulesTest {
 
     @Autowired
@@ -31,6 +37,9 @@ class SecurityRulesTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private UserRepo userRepo;
 
     @Autowired
     private JwtProperties jwtProperties;
@@ -123,9 +132,14 @@ class SecurityRulesTest {
 
     private String tokenFor(Role role) {
         User user = new User();
-        user.setId(1L);
-        user.setEmail("probe@example.com");
+        user.setEmail("test-" + UUID.randomUUID() + "@example.com");
+        user.setPasswordHash("not-used");
+        user.setFirstName("Probe");
+        user.setLastName("Probić");
         user.setRole(role);
+        user.setTermsVersion(termsProperties.version());
+        user.setTermsAcceptedAt(Instant.now());
+        userRepo.saveAndFlush(user);
         return jwtService.issue(user).token();
     }
 }

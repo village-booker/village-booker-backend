@@ -110,6 +110,14 @@ public class OwnerListingService {
         }
     }
 
+    // the host still sees a listing the admin removed, but adds nothing to it (images, features, dates, periods)
+    public static void checkNotRemoved(Listing listing) {
+        if (listing.getStatus() == ListingStatus.REMOVED_BY_ADMIN) {
+            throw new ConflictException(ErrorCode.LISTING_REMOVED,
+                    "Listing " + listing.getId() + " was removed by an admin.");
+        }
+    }
+
     public static BadRequestException typeMismatch(Long listingId) {
         return new BadRequestException(ErrorCode.LISTING_TYPE_MISMATCH,
                 "Listing " + listingId + " is of a different type.");

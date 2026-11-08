@@ -21,6 +21,9 @@ public record AdminUserResponse(
         Instant termsAcceptedAt,
         String hostTermsVersion,
         Instant hostTermsAcceptedAt,
+        // null = not blocked
+        Instant blockedAt,
+        String blockReason,
         // listings that are not DELETED
         long listingCount,
         // bookings made as a guest, in any status
@@ -34,6 +37,6 @@ public record AdminUserResponse(
         return new AdminUserResponse(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(),
                 user.getPhone(), user.getImageUrl(), user.getRole(), user.getLanguage(), user.getCreatedAt(),
                 user.getTermsVersion(), user.getTermsAcceptedAt(), user.getHostTermsVersion(),
-                user.getHostTermsAcceptedAt(), listingCount, bookingCount, ownerCancellationCount);
+                user.getHostTermsAcceptedAt(), user.getBlockedAt(), user.getBlockReason(), listingCount, bookingCount, ownerCancellationCount);
     }
 }

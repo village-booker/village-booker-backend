@@ -1,5 +1,6 @@
 package com.villagebooker.config;
 
+import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtAuthFilter;
 import com.villagebooker.security.JwtService;
 import com.villagebooker.security.SecurityProblemHandler;
@@ -31,6 +32,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtService jwtService,
+                                                   UserRepo userRepo,
                                                    SecurityProblemHandler problemHandler) throws Exception {
         http
                 // stateless JWT API: no session, no cookies, so no CSRF, form login or basic auth
@@ -50,7 +52,7 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(problemHandler)
                         .accessDeniedHandler(problemHandler))
-                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService, userRepo, problemHandler), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

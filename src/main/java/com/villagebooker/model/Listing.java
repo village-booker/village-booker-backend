@@ -51,6 +51,9 @@ public abstract class Listing {
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 
+    @Column(name = "removal_reason", length = 1000)
+    private String removalReason;
+
     // Every booking needs the host's approval, so this is always true. The column stays until the Flyway V1 migration.
     @Column(name = "requires_owner_approval", nullable = false)
     private boolean requiresOwnerApproval = true;

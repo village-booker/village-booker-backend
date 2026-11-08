@@ -8,6 +8,7 @@ import com.villagebooker.dto.auth.RegisterRequest;
 import com.villagebooker.common.exception.BadRequestException;
 import com.villagebooker.common.exception.ConflictException;
 import com.villagebooker.common.exception.ErrorCode;
+import com.villagebooker.common.exception.ForbiddenException;
 import com.villagebooker.enums.user.Language;
 import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.User;
@@ -82,6 +83,10 @@ public class AuthService {
         // same answer for "no such email" and "wrong password"
         if (user == null || !passwordMatches) {
             throw new BadCredentialsException("Invalid email or password.");
+        }
+        // only after the password check, so the answer does not tell anyone else that the account is blocked
+        if (user.getBlockedAt() != null) {
+            throw new ForbiddenException(ErrorCode.USER_BLOCKED, "This account is blocked.");
         }
         return toAuthResponse(user);
     }

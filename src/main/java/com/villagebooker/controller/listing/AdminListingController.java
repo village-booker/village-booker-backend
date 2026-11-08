@@ -4,6 +4,7 @@ import com.villagebooker.controller.common.Paging;
 
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.dto.listing.AdminListingResponse;
+import com.villagebooker.dto.listing.ListingRemovalRequest;
 import com.villagebooker.dto.listing.ListingSummaryResponse;
 import com.villagebooker.dto.listing.RejectionRequest;
 import com.villagebooker.enums.listing.ListingStatus;
@@ -56,6 +57,13 @@ public class AdminListingController {
     public AdminListingResponse reject(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
                                        @Valid @RequestBody RejectionRequest request) {
         return adminListingService.reject(authUser.id(), id, request);
+    }
+
+    // any status except DELETED; out of the search at once, existing bookings go on as usual
+    @PostMapping("/{id}/remove")
+    public AdminListingResponse remove(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id,
+                                       @Valid @RequestBody ListingRemovalRequest request) {
+        return adminListingService.remove(authUser.id(), id, request);
     }
 
     // moderation: removes an inappropriate image (owners change images without a change request)

@@ -48,6 +48,7 @@ public class TourDateService {
     public TourDateResponse create(Long ownerId, Long tourId, TourDateRequest request) {
         // lock order Listing -> TourDate (spec 5); also serializes the "same start date" check
         Tour tour = lockOwnTour(ownerId, tourId);
+        OwnerListingService.checkNotRemoved(tour);
 
         LocalDate start = request.startDate();
         if (!start.isAfter(AppTime.today(clock))) {

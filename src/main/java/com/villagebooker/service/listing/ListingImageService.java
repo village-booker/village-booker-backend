@@ -107,7 +107,7 @@ public class ListingImageService {
     }
 
     public PageResponse<AdminImageResponse> findByStatus(ImageStatus status, Pageable pageable) {
-        return tx.execute(s -> PageResponse.of(listingImageRepo.findByStatusAndListingStatusNot(status, ListingStatus.DELETED, pageable), AdminImageResponse::from));
+        return tx.execute(s -> PageResponse.of(listingImageRepo.findByStatusAndListingStatusNotIn(status, ListingStatus.CLOSED, pageable), AdminImageResponse::from));
     }
 
     public AdminImageResponse approve(Long imageId) {
@@ -179,6 +179,7 @@ public class ListingImageService {
     }
 
     private static void checkLimit(Listing listing) {
+        OwnerListingService.checkNotRemoved(listing);
         if (listing.getImages().stream().filter(ListingImageService::isActive).count() >= MAX_IMAGES) {
             throw new BadRequestException(ErrorCode.IMAGE_LIMIT_REACHED,
                     "A listing can have at most " + MAX_IMAGES + " images.", Map.of("max", MAX_IMAGES));

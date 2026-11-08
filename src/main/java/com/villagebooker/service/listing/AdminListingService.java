@@ -5,6 +5,7 @@ import com.villagebooker.common.exception.ErrorCode;
 import com.villagebooker.common.exception.NotFoundException;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.dto.listing.AdminListingResponse;
+import com.villagebooker.dto.listing.ListingRemovalRequest;
 import com.villagebooker.dto.listing.ListingSummaryResponse;
 import com.villagebooker.dto.listing.RejectionRequest;
 import com.villagebooker.enums.listing.ListingStatus;
@@ -55,6 +56,24 @@ public class AdminListingService {
         listing.setStatus(ListingStatus.REJECTED);
         listing.setRejectionReason(reason);
         historyWriter.statusChanged(listing, ListingStatus.PENDING, ListingStatus.REJECTED, adminId, reason);
+        return AdminListingResponse.from(listing);
+    }
+
+    // under the listing lock that booking creation takes, so no booking slips in after the removal
+    @Transactional
+    public AdminListingResponse remove(Long adminId, Long listingId, ListingRemovalRequest request) {
+        Listing listing = listingRepo.findByIdForUpdate(listingId)
+                .map(l -> (Listing) Hibernate.unproxy(l))
+                .orElseThrow(() -> OwnerListingService.listingNotFound(listingId));
+        if (ListingStatus.CLOSED.contains(listing.getStatus())) {
+            throw new ConflictException(ErrorCode.LISTING_ALREADY_REMOVED,
+                    "Listing " + listingId + " is already deleted or removed.",
+                    Map.of("status", listing.getStatus().name()));
+        }
+        String reason = request.reason().trim();
+        historyWriter.statusChanged(listing, listing.getStatus(), ListingStatus.REMOVED_BY_ADMIN, adminId, reason);
+        listing.setStatus(ListingStatus.REMOVED_BY_ADMIN);
+        listing.setRemovalReason(reason);
         return AdminListingResponse.from(listing);
     }
 
