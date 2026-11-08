@@ -15,6 +15,7 @@ import com.villagebooker.model.Listing;
 import com.villagebooker.model.ListingImage;
 import com.villagebooker.repo.listing.ListingImageRepo;
 import com.villagebooker.repo.listing.ListingRepo;
+import com.villagebooker.storage.ImageFiles;
 import com.villagebooker.storage.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,8 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +42,6 @@ import java.util.Set;
 public class ListingImageService {
 
     static final int MAX_IMAGES = 15;
-    static final int MAX_BYTES = 5 * 1024 * 1024;
 
     // statuses in which guests can see the listing, so new images need a review
     private static final Set<ListingStatus> PUBLIC = Set.of(ListingStatus.APPROVED, ListingStatus.PAUSED_BY_OWNER);
@@ -55,7 +53,7 @@ public class ListingImageService {
     private final TransactionTemplate tx;
 
     public ListingImageResponse upload(Long ownerId, Long listingId, MultipartFile file) {
-        byte[] content = checkFile(file);
+        byte[] content = ImageFiles.read(file);
         tx.executeWithoutResult(status -> checkLimit(ownerListingService.findOwn(ownerId, listingId)));
 
         ImageStorage.StoredImage stored = imageStorage.upload(content, "village-booker/listings/" + listingId);
@@ -185,43 +183,5 @@ public class ListingImageService {
             throw new BadRequestException(ErrorCode.IMAGE_LIMIT_REACHED,
                     "A listing can have at most " + MAX_IMAGES + " images.", Map.of("max", MAX_IMAGES));
         }
-    }
-
-    // size and real file type (first bytes), not the Content-Type the client claims
-    private static byte[] checkFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw invalidType();
-        }
-        if (file.getSize() > MAX_BYTES) {
-            throw new BadRequestException(ErrorCode.IMAGE_TOO_LARGE, "An image can have at most 5 MB.",
-                    Map.of("maxMb", 5));
-        }
-        byte[] content;
-        try {
-            content = file.getBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        if (!isJpeg(content) && !isPng(content) && !isWebp(content)) {
-            throw invalidType();
-        }
-        return content;
-    }
-
-    private static BadRequestException invalidType() {
-        return new BadRequestException(ErrorCode.IMAGE_INVALID_TYPE, "Only JPEG, PNG and WebP images are allowed.");
-    }
-
-    private static boolean isJpeg(byte[] b) {
-        return b.length > 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF;
-    }
-
-    private static boolean isPng(byte[] b) {
-        return b.length > 8 && (b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G';
-    }
-
-    private static boolean isWebp(byte[] b) {
-        return b.length > 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
-                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P';
     }
 }

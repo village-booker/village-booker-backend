@@ -43,6 +43,10 @@ public class User {
     @Column(name = "image_url")
     private String imageUrl;
 
+    // storage id of the profile picture, to delete the file when it is replaced or removed
+    @Column(name = "image_public_id")
+    private String imagePublicId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

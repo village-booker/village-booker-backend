@@ -30,6 +30,8 @@ public enum ErrorCode {
     USER_ALREADY_HOST,
     ADMIN_CANNOT_BE_HOST,
     INVALID_BANK_ACCOUNT,
+    CURRENT_PASSWORD_INVALID,
+    NOT_A_HOST,
 
     // listings
     LISTING_NOT_FOUND,

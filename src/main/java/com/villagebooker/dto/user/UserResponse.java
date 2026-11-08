@@ -11,6 +11,8 @@ public record UserResponse(
         String lastName,
         String phone,
         String imageUrl,
+        // only the user's own data (GET /me, login): the host's payout account
+        String bankAccount,
         Role role,
         boolean host,
         Language language
@@ -24,6 +26,7 @@ public record UserResponse(
                 user.getLastName(),
                 user.getPhone(),
                 user.getImageUrl(),
+                user.getBankAccount(),
                 user.getRole(),
                 user.getRole() == Role.OWNER,
                 user.getLanguage());

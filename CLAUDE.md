@@ -64,6 +64,13 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - Trajanje tokena 24h, bez refresh tokena; odjava = frontend briše token. CORS origin-i za produkciju se dodaju kad bude poznat domen.
 - Lozinke: BCrypt (max 72 bajta). Login za nepostojeći email i pogrešnu lozinku vraća isti 401.
 - BCrypt (`encode` / `matches`, ~100 ms) se nikad ne izvršava unutar `@Transactional` metode, jer bi za to vreme držao konekciju iz pool-a. Zato `AuthService.register` / `login` namerno nemaju `@Transactional`.
+- Profil (`UserService`, `ProfileImageService`, `/api/users/me`, svaki prijavljen korisnik):
+    - `PUT /api/users/me` sa `firstName`, `lastName`, `phone` (prazan telefon = bez telefona); email se ne menja (tražio bi mejl za potvrdu).
+    - `PUT /me/password` sa `currentPassword` i `newPassword` (204); pogrešna trenutna -> 400 `CURRENT_PASSWORD_INVALID`. Ranije izdati tokeni važe do isteka.
+    - `PUT /me/bank-account` (`hasRole('OWNER')`) sa `bankAccount` i `currentPassword` (da ukraden token ne preusmeri isplate); uloga se proverava i iz baze (403 `NOT_A_HOST`), ista provera računa kao "Postani domaćin". `UserResponse.bankAccount` vidi samo sam korisnik.
+    - `changePassword` i `updateBankAccount` nemaju `@Transactional` (BCrypt); upis ide u kratku transakciju preko `TransactionTemplate`.
+    - Slika profila: `PUT /me/image` (multipart, deo `file`, iste provere kao slike oglasa: `storage.ImageFiles`) zamenjuje staru, `DELETE /me/image`. Bez pregleda admina; admin uklanja neprikladnu sa `DELETE /api/admin/users/{id}/image`. Upload ide van transakcije, upis pod lockom korisnika (`UserRepo.findByIdForUpdate`), stari fajl se briše iz skladišta tek posle upisa; `User.imagePublicId` služi za brisanje.
+    - Brisanje naloga: kasnije, uz admin upravljanje korisnicima.
 - Email se uvek čuva i traži malim slovima (`AuthService` normalizuje), pa `UserRepo` koristi `findByEmail` / `existsByEmail`, ne `...IgnoreCase` (koji ne koristi indeks).
 - Odluka: registracija sa već postojećim emailom vraća 409 "Email is already registered." (korisnik mora da zna zašto ne može da se registruje). Posledica: napadač može da proverava koji su emailovi registrovani. Prihvaćeno za MVP; ako bude potrebno, menja se u opšti odgovor + mejl vlasniku naloga.
 - Poznato ograničenje: obrisan ili blokiran korisnik zadržava pristup do isteka tokena (24h), jer filter ne ide u bazu. Kad se uvede blokiranje naloga, odlučiti da li se token proverava u bazi.
@@ -166,6 +173,6 @@ Okrug kao šifarnik, naziv kapara ili avans, online plaćanje i provajder, plan 
 
 ## Git
 
-- Ne raditi direktno na `main`. Rad ide na `develop`.
+- Ne raditi direktno na `master` (glavna grana, ranije `main`). Rad ide na `develop`.
 - Ne commitovati `.env`, `build/`, `.gradle-local/` ni IDE fajlove.
 - Ako izmena menja model ili pravila iz ovog fajla, ažurirati i ovaj fajl (i spec, ako se tiče rezervacija) u istom commitu.

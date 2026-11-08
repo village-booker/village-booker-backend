@@ -54,9 +54,7 @@ public class AuthService {
         if (userRepo.existsByEmail(email)) {
             throw new ConflictException(ErrorCode.EMAIL_ALREADY_REGISTERED, "Email is already registered.");
         }
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            throw new BadRequestException(ErrorCode.PASSWORD_TOO_LONG, "Password is too long.");
-        }
+        checkPasswordLength(request.password());
         String passwordHash = passwordEncoder.encode(request.password());
 
         User user = new User();
@@ -86,6 +84,13 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password.");
         }
         return toAuthResponse(user);
+    }
+
+    // @Size(max = 72) counts characters, BCrypt counts bytes (č, ž... take two)
+    public static void checkPasswordLength(String password) {
+        if (password.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
+            throw new BadRequestException(ErrorCode.PASSWORD_TOO_LONG, "Password is too long.");
+        }
     }
 
     private AuthResponse toAuthResponse(User user) {
