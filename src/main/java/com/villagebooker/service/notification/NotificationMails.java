@@ -102,6 +102,12 @@ public class NotificationMails {
                 .orElse(List.of());
     }
 
+    // not from an event: PasswordResetService saves it in its own transaction
+    public EmailMessage passwordReset(User user, String link, Instant expiresAt) {
+        return MailTemplate.PASSWORD_RESET.render(user,
+                Map.of("link", link, "deadline", moment(expiresAt, user.getLanguage() != Language.EN)));
+    }
+
     private static User owner(Booking booking) {
         return booking.getListing().getOwner();
     }

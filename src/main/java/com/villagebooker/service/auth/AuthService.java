@@ -102,7 +102,7 @@ public class AuthService {
         return AuthResponse.of(jwtService.issue(user), user);
     }
 
-    private static String normalizeEmail(String email) {
+    static String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 

@@ -188,6 +188,20 @@ enum MailTemplate {
 
             You can correct it with a change request and it will be reviewed again."""),
 
+    PASSWORD_RESET(
+            "Nova lozinka za Village Booker",
+            """
+            zatražena je nova lozinka za vaš nalog. Novu lozinku postavljate na ovom linku:
+            {link}
+
+            Link važi do {deadline} i može se iskoristiti jednom. Ako niste vi tražili novu lozinku, zanemarite ovaj mejl,             vaša lozinka ostaje ista.""",
+            "Your new Village Booker password",
+            """
+            a new password was requested for your account. Set your new password here:
+            {link}
+
+            The link is valid until {deadline} and can be used once. If you did not ask for a new password, ignore this             email; your password stays the same."""),
+
     LISTING_REMOVED(
             "Oglas je uklonjen: {listing}",
             """
