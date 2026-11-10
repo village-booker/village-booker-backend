@@ -447,11 +447,11 @@ Sledece:
    - [x] otkazivanje (gost, domacin, ceo termin ture) i refund; otkazuje se samo pre dana pocetka (`BOOKING_ALREADY_STARTED`)
    - [x] pauziranje i brisanje usluge (9.3)
 5. [x] Scheduler: istek rezervacija, minimum za termine, zavrsavanje (sekcija 8). Uz to: domacin potvrdjuje svaku rezervaciju, rokovi do pocetka (sekcije 1, 8).
-6. Mejlovi preko dogadjaja posle commita (sekcija 14).
+6. [x] Mejlovi preko dogadjaja (sekcija 14): za sada se samo upisuju u outbox `EmailMessage` (`PENDING`); slanje preko provajdera na kraju.
 7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi, prijava recenzije adminu (`ReviewReport`: korisnik prijavljuje, admin uklanja recenziju ili odbacuje prijave).
    - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4).
    - [x] Blokada korisnika (vazi odmah, i za vec izdate tokene), admin uklanja uslugu (`UKLONJENA_ADMIN`), brisanje usluge bez otkazivanja rezervacija (9.3). Brisanje naloga, sudbina oglasa blokiranog domacina i admin izmena rezervacije: posle odluke tima.
-8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), outbox za mejlove, penali.
+8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), slanje mejlova iz outbox-a (provajder), penali.
 
 Testovi uz svaki korak:
 
@@ -483,6 +483,8 @@ Obrazac:
 | `TourDateConfirmed` (skupljen minimum) | svi gosti termina |
 | `TourDateCancelled` (minimum nije skupljen / vlasnik otkazao) | svi gosti termina |
 | `ListingApproved`, `ListingRejected` | vlasnik |
+
+Implementacija (odluka: provajder na kraju, Mailchimp se placa): umesto `@Async` + `AFTER_COMMIT` listener je `BEFORE_COMMIT` i upisuje mejl u tabelu `email_message` u istoj transakciji (outbox odmah, ne kasnije). Slanje = buduci scheduler nad `PENDING` redovima. `BookingStatusChangedEvent` (iz/u status) pokriva odobravanje, odbijanje, istek, uplatu i otkazivanje; otkazan termin ture salje mejl svakom gostu kroz otkazivanje njegove rezervacije (`CANCELLED_BY_OWNER` / `CANCELLED_MIN_NOT_REACHED`). Dodato: uklanjanje oglasa (`REMOVED_BY_ADMIN`) -> vlasnik.
 
 Ogranicenje: ako aplikacija padne izmedju commita i slanja, mejl se gubi (prihvatljivo za MVP). Kasnije: **outbox** tabela `email_outbox` upisana u istoj transakciji + scheduler koji salje i ponavlja.
 

@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // The scheduler's steps (spec 8) on real bookings. Time passing is simulated by moving expiresAt, deadlines and
 // dates into the past. The jobs join the test transaction, so everything is rolled back.
-@SpringBootTest(properties = "app.payments.simulated=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class BookingJobsFlowTest {

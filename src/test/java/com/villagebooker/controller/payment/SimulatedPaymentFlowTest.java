@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // The deposit "paid" without a provider (app.payments.simulated=true): deposit listings from BookingTestSupport,
 // 5000 per night, 30 % deposit.
 // Runs against the configured database; @Transactional rolls every test back, nothing stays in the DB.
-@SpringBootTest(properties = "app.payments.simulated=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class SimulatedPaymentFlowTest {

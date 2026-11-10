@@ -9,6 +9,7 @@ Komentari u kodu samo tamo gde iz imena i koda nije jasno zašto je nešto urađ
 ## Stack i pokretanje
 
 - Java 21, Spring Boot 4, Gradle, Spring Data JPA (Hibernate), Spring Security + JWT, PostgreSQL (Neon), Lombok.
+- Mejlovi: provajder kasnije (Mailchimp se plaća); do tada se mejlovi samo upisuju u bazu (`EmailMessage`, vidi "Mejlovi").
 - Slike oglasa: Cloudinary (`com.cloudinary:cloudinary-http5`), besplatni plan. Ključevi `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` u `.env` (`app.cloudinary.*`); API key i secret nikad ne idu u frontend (frontend treba samo cloud name).
 - Tajne idu u `.env` u korenu repoa (napravi ga po uzoru na `.env.example`). `.env` se nikad ne commituje. `application.properties` sme da sadrži samo `${...}` reference.
 - Pokretanje: `./gradlew bootRun`. Testovi: `./gradlew test`. Pre push-a: `./gradlew build`.
@@ -23,14 +24,14 @@ Komentari u kodu samo tamo gde iz imena i koda nije jasno zašto je nešto urađ
 
 ## Struktura
 
-Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`, `enums` i `dto` imaju iste podpakete po oblasti: `auth`, `user`, `listing` (oglasi, moderacija, zahtevi za izmenu, slike), `feature`, `tour` (termini tura), `booking`, `payment`, `review`, plus `common` za zajedničko. Nova klasa ide u svoj sloj i u podpaket svoje oblasti; nova oblast dobija isti podpaket u svakom sloju gde ima klasa.
+Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`, `enums` i `dto` imaju iste podpakete po oblasti: `auth`, `user`, `listing` (oglasi, moderacija, zahtevi za izmenu, slike), `feature`, `tour` (termini tura), `booking`, `payment`, `review`, `notification` (događaji i mejlovi), plus `common` za zajedničko. Nova klasa ide u svoj sloj i u podpaket svoje oblasti; nova oblast dobija isti podpaket u svakom sloju gde ima klasa.
 
 - `controller`: REST kontroleri (`controller.listing.OwnerListingController`...); `controller.common.Paging` pretvara `?page=&size=` u `PageRequest` (najviše 100 po strani).
 - `service`: poslovna logika i transakcije (`service.listing.ChangeRequestService`...). Pomoćne klase oblasti su package-private u njenom paketu (`ListingFields`, `ListingRequests`); ono što koristi druga oblast je `public` (npr. `OwnerListingService.findOwn`, `checkOwner`).
 - `dto`: request / response record-i (`dto.listing`, `dto.tour`...); `dto.common.PageResponse` za liste sa paginacijom.
 - `repo`: Spring Data repository-ji (`repo.listing.ListingRepo`...). `FavoriteRepo` je u `repo.user` (omiljeni oglasi su lista korisnika).
 - `enums`: po oblasti (`enums.listing.ListingStatus`, `enums.payment.PaymentMethod`...).
-- `model`: JPA entiteti, bez podpaketa (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`).
+- `model`: JPA entiteti, bez podpaketa (`User`, `Listing` sa podklasama `Accommodation` i `Tour`, `TourDate`, `Booking`, `Payment`, `Review`, `ReviewReport`, `EmailMessage`, `UnavailablePeriod`, `Favorite`, `Feature`, `ListingImage`, `ListingStatusHistory`, `ListingChangeRequest`).
 - `security`: JWT i Spring Security infrastruktura (`JwtService`, `JwtAuthFilter`, `AuthUser`, `SecurityProblemHandler`).
 - `config`: konfiguracija (`SecurityConfig`, `JwtProperties`, `TermsProperties`, `CloudinaryProperties`, `BookingProperties`).
 - `storage`: skladište slika iza interfejsa `ImageStorage` (`CloudinaryImageStorage`); servisi ne znaju za Cloudinary, pa se servis može zameniti jednom klasom. U testovima ga zamenjuje `FakeImageStorage` (`@Primary`, bez mreže).
@@ -63,7 +64,7 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - JWT (HS256, `JWT_SECRET` iz `.env`, trajanje `app.jwt.expiration`) nosi `sub` = id, `email`, `role`. Filter za svaki zahtev sa tokenom jednim upitom po id-ju proverava da li korisnik postoji i da li je blokiran (`UserRepo.findBlockedById`); uloga se i dalje čita iz tokena. U kontroleru: `@AuthenticationPrincipal AuthUser user`. Promena uloge važi tek sa novim tokenom.
 - Javno: `POST /api/auth/register`, `POST /api/auth/login`; sve ostalo traži token. Nove javne rute se dodaju u `SecurityConfig`.
 - Trajanje tokena 24h, bez refresh tokena; odjava = frontend briše token. CORS origin-i za produkciju se dodaju kad bude poznat domen.
-- Lozinke: BCrypt (max 72 bajta). Login za nepostojeći email i pogrešnu lozinku vraća isti 401.
+- Lozinke: BCrypt (max 72 bajta), jačina `app.security.bcrypt-strength` (10; u testovima 4, a stari hash-evi važe i posle promene jer je jačina zapisana u njima). Login za nepostojeći email i pogrešnu lozinku vraća isti 401.
 - BCrypt (`encode` / `matches`, ~100 ms) se nikad ne izvršava unutar `@Transactional` metode, jer bi za to vreme držao konekciju iz pool-a. Zato `AuthService.register` / `login` namerno nemaju `@Transactional`.
 - Profil (`UserService`, `ProfileImageService`, `/api/users/me`, svaki prijavljen korisnik):
     - `PUT /api/users/me` sa `firstName`, `lastName`, `phone` (prazan telefon = bez telefona); email se ne menja (tražio bi mejl za potvrdu).
@@ -147,6 +148,7 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - Admin (`AdminBookingController`, `/api/admin/bookings`, `hasRole('ADMIN')`, za sada samo čitanje): `GET ?status=&listingId=&guestId=&ownerId=` (sve rezervacije, najnovije prvo, `AdminBookingResponse` = rezervacija + gost + domaćin sa kontaktom), `GET /{id}` (i uplate, `PaymentResponse`), `GET /owner-cancellations?months=` (spec 9.4: domaćini po broju `CANCELLED_BY_OWNER` sa `cancelledAt` od početka dana pre `months` meseci, 1..24, podrazumevano 6; najviše prvi). Penale admin rešava ručno. Admin još ne menja rezervacije (započet boravak).
 - Plaćanje: provajder je otvorena odluka. Do tada `app.payments.simulated=true` (`PAYMENTS_SIMULATED` u `.env`, podrazumevano `false`) dodaje `POST /api/bookings/{id}/pay` (`SimulatedPaymentService`): gost "plati" kaparu (`Payment` `SUCCEEDED`, `DEPOSIT` ili `FULL` za 100 %), `amountDue` se umanjuje, rezervacija postaje `CONFIRMED`. Bez podešavanja ruta i servis ne postoje. Nikad uključeno u produkciji.
 - Scheduler (spec 8): `BookingScheduler` na `app.booking.scheduler-delay` (`PT1M`), redom: istek (`EXPIRABLE` sa prošlim `expiresAt` -> `EXPIRED`, tura vraća mesta), minimum (termin `OPEN` posle `minGuestsDeadline` -> `CANCELLED`, aktivne rezervacije `CANCELLED_MIN_NOT_REACHED` sa 100 %, dozvoljeno i na dan početka), završavanje (`CONFIRMED` sa `endDate < today` -> `COMPLETED`, termin `CONFIRMED`/`FULL` posle `endDate` -> `COMPLETED`). Koraci su u `BookingJobs`: jedna stavka = jedna transakcija, svaka ponovo proverava stanje, greška jedne se loguje. ShedLock dolazi uz Flyway; do tada je dvostruko pokretanje bezbedno zbog provera, locka termina i `@Version`.
+    - Svi testovi imaju ista podešavanja (`@SpringBootTest` + `@AutoConfigureMockMvc`, bez `properties`; `app.payments.simulated=true` je u test `application.properties`), pa Spring podiže jedan kontekst za sve. Klasa sa svojim podešavanjima (`SimulatedPaymentDisabledTest`) podiže još jedan; ne dodavati nove varijante bez potrebe.
     - U testovima je isključen (`app.scheduling.enabled=false` u `src/test/resources/config/application.properties`, koji se učitava preko glavnog); testovi zovu korake iz `BookingJobs` direktno i "pomeraju vreme" upisom prošlih rokova i datuma.
 - Statusi i prelazi su definisani u spec-u; ne uvoditi nove statuse bez izmene spec-a.
 
@@ -160,6 +162,14 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 - `Listing.rating` / `reviewCount` se uvek preračunavaju iz recenzija bez `deletedAt` (`ListingRating`, prosek `HALF_UP` na 2 decimale), pod lockom oglasa. Posle locka ide `refresh` oglasa, jer follow-on locking pročita red pre čekanja na lock, pa bi druga recenzija pala na `@Version` (dokaz: `BookingConcurrencyTest`).
 - Omiljeni (`FavoriteService`, `/api/users/me/favorites`, svaki prijavljen korisnik): `PUT /{listingId}` i `DELETE /{listingId}` (204, oba idempotentna; dodavanje je `insert ... on conflict do nothing`), `GET` (najnovije dodati prvi, `FavoriteResponse` = kartica oglasa + `bookable` + `addedAt`), `GET /ids?listingIds=` (koji su od datih, do 100, sačuvani; za srca na strani pretrage). Dodaje se samo oglas iz `VISIBLE` (inače 404), a obrisan ili odbijen oglas ispada iz liste.
 
+## Mejlovi (spec 14)
+
+- Servis u transakciji samo objavi događaj sa id-jevima (`service.notification`): `BookingCreatedEvent` (`BookingService.save`), `BookingStatusChangedEvent` (svaki `BookingStatusChanger.moveTo`, pa i scheduler i otkazivanje), `TourDateConfirmedEvent` (`OPEN` -> `CONFIRMED`/`FULL` pri prijavi), `ListingStatusChangedEvent` (`ListingStatusHistoryWriter`). Nova promena statusa koja ide kroz ova mesta automatski dobija događaj.
+- `NotificationListener` (`@TransactionalEventListener(BEFORE_COMMIT)`) upisuje mejlove u `EmailMessage` (outbox, spec 14) u istoj transakciji: vide konačno stanje (razlog, povrat), rollback ih briše, commit ih ne gubi. Pre pripreme ide `flush`, pa konflikt (`@Version`) pada sa istim izuzetkom kao pri commit-u; greška u pripremi teksta se samo loguje i ne poništava promenu, a greška baze poništava sve. Test koji commit-uje i sam briše korisnike mora prvo da obriše njihove `email_message` redove (`BookingConcurrencyTest.cleanUp`). Mejl se još ne šalje nikome: red ostaje `PENDING` (`EmailStatus`: `PENDING`, `SENT`, `FAILED`; poslednje dve su za budući sender, dodate odmah zbog `CHECK` ograničenja). Kad se izabere provajder: scheduler uzima `PENDING` redom po `created_at`, šalje na `recipient.email`, upisuje `SENT` + `sentAt` ili `FAILED`.
+- Ko dobija: nova rezervacija -> gost i domaćin; `AWAITING_PAYMENT`, `CONFIRMED`, `REJECTED`, `EXPIRED`, `CANCELLED_BY_OWNER`, `CANCELLED_MIN_NOT_REACHED` -> gost; `CONFIRMED` posle uplate i `CANCELLED_BY_GUEST` -> domaćin; termin potvrđen -> svi gosti sa aktivnom rezervacijom na terminu; oglas odobren (iz `PENDING` / `REJECTED`), odbijen, uklonjen -> domaćin. Domaćinova pauza, nastavak i brisanje i `COMPLETED` ne šalju ništa.
+- Tekstovi su u `MailTemplate` na oba jezika, po `User.language` primaoca (jezik u trenutku događaja); obični tekst, datumi `dd.MM.yyyy.`, iznosi u RSD. Red sa parametrom koji nema vrednost (razlog, napomena, povrat) se izostavlja.
+- Testovi se vraćaju (rollback), pa listener u njima ne radi sam: `NotificationFlowTest` proverava objavljene događaje (`@RecordApplicationEvents`), a mejlove gradi direktno preko `NotificationMails` i `NotificationListener`.
+
 ## Slojevi i API
 
 - Controller je tanak: prima request DTO (Bean Validation), vraća response DTO. Entiteti nikad ne izlaze iz servisa.
@@ -171,7 +181,7 @@ Podela po slojevima, a unutar sloja po oblasti. `controller`, `service`, `repo`,
 
 ## Redosled rada
 
-Spoljne stvari i integracije rade se na kraju, kad je sav ostali posao gotov: mejlovi (slanje i provajder), pravi provajder plaćanja, Flyway sa ShedLock-om, deploy. Do tada ide samo ono što radi bez spoljnog servisa (Cloudinary je već uveden). Kad je sledeći korak iz spec-a integracija, preskače se i radi se prvi sledeći koji nije.
+Spoljne stvari i integracije rade se na kraju, kad je sav ostali posao gotov: slanje mejlova (provajder; mejlovi se već upisuju u `EmailMessage`), pravi provajder plaćanja, Flyway sa ShedLock-om, deploy. Do tada ide samo ono što radi bez spoljnog servisa (Cloudinary je već uveden). Kad je sledeći korak iz spec-a integracija, preskače se i radi se prvi sledeći koji nije.
 
 ## Otvorene odluke (ne implementirati bez dogovora tima)
 

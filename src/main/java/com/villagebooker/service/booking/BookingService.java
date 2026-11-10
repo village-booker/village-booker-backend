@@ -26,8 +26,11 @@ import com.villagebooker.repo.tour.TourDateRepo;
 import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.service.listing.ListingPrices;
 import com.villagebooker.service.listing.OwnerListingService;
+import com.villagebooker.service.notification.BookingCreatedEvent;
+import com.villagebooker.service.notification.TourDateConfirmedEvent;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +56,7 @@ public class BookingService {
     private final BookingStatusChanger statusChanger;
     private final BookingCanceller canceller;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public BookingResponse createAccommodation(Long guestId, AccommodationBookingRequest request) {
@@ -103,7 +107,11 @@ public class BookingService {
                     "Only " + freePlaces + " places are left on this tour date.",
                     Map.of("freePlaces", freePlaces));
         }
+        TourDateStatus before = date.getStatus();
         TourDateSeats.take(date, request.guestCount());
+        if (before == TourDateStatus.OPEN && date.getStatus() != TourDateStatus.OPEN) {
+            events.publishEvent(new TourDateConfirmedEvent(date.getId()));
+        }
 
         Booking booking = newBooking(guestId, listing, request.guestCount(), request.note(),
                 date.getStartDate(), date.getEndDate());
@@ -154,7 +162,9 @@ public class BookingService {
     // the host approves every booking, whatever the payment method
     private Booking save(Booking booking) {
         statusChanger.start(booking, BookingStatus.AWAITING_OWNER_APPROVAL);
-        return bookingRepo.save(booking);
+        Booking saved = bookingRepo.save(booking);
+        events.publishEvent(new BookingCreatedEvent(saved.getId()));
+        return saved;
     }
 
     @Transactional(readOnly = true)

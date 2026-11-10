@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // The admin's view of all bookings and of cancellations by hosts (spec 9.4). Runs against the configured
 // database, which may hold other bookings, so the lists are filtered by the test's own users;
 // @Transactional rolls every test back.
-@SpringBootTest(properties = "app.payments.simulated=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class AdminBookingFlowTest {

@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // Cancelling and refunds (spec 3, 9.2). Accommodation: 5000 per night for 2 guests, so 2 nights = 10000 and a
 // 30 % deposit = 3000; tour: 3500 per person, 2..12 guests per date. Payments are simulated.
 // Runs against the configured database; @Transactional rolls every test back, nothing stays in the DB.
-@SpringBootTest(properties = "app.payments.simulated=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class BookingCancellationFlowTest {

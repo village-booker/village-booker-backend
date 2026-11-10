@@ -49,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // The host pauses, resumes and deletes own listings (spec 9.3); deleting never cancels bookings.
 // Runs against the configured database; @Transactional rolls every test back, nothing stays in the DB.
-@SpringBootTest(properties = "app.payments.simulated=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class ListingLifecycleFlowTest {

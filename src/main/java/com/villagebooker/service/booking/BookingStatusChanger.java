@@ -7,7 +7,9 @@ import com.villagebooker.config.BookingProperties;
 import com.villagebooker.enums.booking.BookingStatus;
 import com.villagebooker.model.Booking;
 import com.villagebooker.model.TourDate;
+import com.villagebooker.service.notification.BookingStatusChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -15,17 +17,20 @@ import java.time.Duration;
 import java.time.Instant;
 
 // Every status change of a booking goes through here (spec 3, 8): the transition is checked and expiresAt is set
-// on entering a status that can expire and cleared on leaving it.
+// on entering a status that can expire and cleared on leaving it. Each change publishes an event for the emails.
 @Component
 @RequiredArgsConstructor
 public class BookingStatusChanger {
 
     private final BookingProperties properties;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     public void moveTo(Booking booking, BookingStatus status) {
-        BookingTransitions.check(booking.getStatus(), status);
+        BookingStatus from = booking.getStatus();
+        BookingTransitions.check(from, status);
         set(booking, status);
+        events.publishEvent(new BookingStatusChangedEvent(booking.getId(), from, status));
     }
 
     // the scheduler expires bookings later (spec 8), so until then an expired one still has its old status

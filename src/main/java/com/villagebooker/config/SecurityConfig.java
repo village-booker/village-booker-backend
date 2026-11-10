@@ -66,9 +66,10 @@ public class SecurityConfig {
                 """);
     }
 
+    // the cost is stored in each hash, so changing it keeps the old hashes valid; tests lower it (each hash ~100 ms at 10)
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public PasswordEncoder passwordEncoder(@Value("${app.security.bcrypt-strength:10}") int strength) {
+        return new BCryptPasswordEncoder(strength);
     }
 
     @Bean

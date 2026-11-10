@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
@@ -25,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 // Two uploads of a profile picture at once: one wins, the file of the other is deleted from the storage, none leaks.
 // Not @Transactional: the threads must see each other's commits, so the user is committed and removed in @AfterEach.
 @SpringBootTest
+// same configuration as the other tests, so they share one Spring context
+@AutoConfigureMockMvc
 class ProfileImageConcurrencyTest {
 
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0};

@@ -123,7 +123,11 @@ class BookingConcurrencyTest {
             jdbc.update("delete from listing where id = ?", id);
             userIds.add(ownerId);
         }
-        userIds.stream().distinct().forEach(id -> jdbc.update("delete from app_user where id = ?", id));
+        userIds.stream().distinct().forEach(id -> {
+            // the committed changes saved notification emails for their users
+            jdbc.update("delete from email_message where recipient_id = ?", id);
+            jdbc.update("delete from app_user where id = ?", id);
+        });
     }
 
     @Test
