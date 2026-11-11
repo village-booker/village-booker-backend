@@ -64,6 +64,8 @@ class PasswordResetFlowTest {
                                 """.formatted(email)))
                 .andExpect(status().isCreated());
         userId = userRepo.findByEmail(email).orElseThrow().getId();
+        // the confirmation email from registration is not what these tests look at
+        emailRepo.deleteAll(emails());
     }
 
     @Test

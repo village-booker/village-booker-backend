@@ -24,6 +24,7 @@ import com.villagebooker.repo.listing.ListingRepo;
 import com.villagebooker.repo.listing.UnavailablePeriodRepo;
 import com.villagebooker.repo.tour.TourDateRepo;
 import com.villagebooker.repo.user.UserRepo;
+import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.listing.ListingPrices;
 import com.villagebooker.service.listing.OwnerListingService;
 import com.villagebooker.service.notification.BookingCreatedEvent;
@@ -57,9 +58,11 @@ public class BookingService {
     private final BookingCanceller canceller;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final EmailVerificationService emailVerification;
 
     @Transactional
     public BookingResponse createAccommodation(Long guestId, AccommodationBookingRequest request) {
+        emailVerification.requireVerified(guestId);
         LocalDate start = request.arrival();
         LocalDate end = request.departure().minusDays(1);
         LocalDate today = AppTime.today(clock);
@@ -89,6 +92,7 @@ public class BookingService {
 
     @Transactional
     public BookingResponse createTour(Long guestId, TourBookingRequest request) {
+        emailVerification.requireVerified(guestId);
         Long tourId = tourDateRepo.findTourIdById(request.tourDateId())
                 .orElseThrow(() -> tourDateNotFound(request.tourDateId()));
         // lock order Listing -> TourDate (spec 5): listing deletion locks the listing too

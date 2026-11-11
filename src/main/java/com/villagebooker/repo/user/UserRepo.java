@@ -20,6 +20,8 @@ public interface UserRepo extends JpaRepository<User, Long>, JpaSpecificationExe
 
     boolean existsByEmail(String email);
 
+    boolean existsByIdAndEmailVerifiedAtIsNotNull(Long id);
+
     // JwtAuthFilter on every request with a token: empty = the user no longer exists
     @Query("select case when u.blockedAt is null then false else true end from User u where u.id = :id")
     Optional<Boolean> findBlockedById(@Param("id") Long id);

@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
-                                "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                                "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-email").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/features", "/api/listings", "/api/listings/*",
                                 "/api/listings/*/availability", "/api/listings/*/reviews").permitAll()
                         .requestMatchers("/error").permitAll()

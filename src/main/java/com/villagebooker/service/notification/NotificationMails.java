@@ -102,6 +102,11 @@ public class NotificationMails {
                 .orElse(List.of());
     }
 
+    public EmailMessage emailVerification(User user, String link, Instant expiresAt) {
+        return MailTemplate.EMAIL_VERIFICATION.render(user,
+                Map.of("link", link, "deadline", moment(expiresAt, user.getLanguage() != Language.EN)));
+    }
+
     // not from an event: PasswordResetService saves it in its own transaction
     public EmailMessage passwordReset(User user, String link, Instant expiresAt) {
         return MailTemplate.PASSWORD_RESET.render(user,

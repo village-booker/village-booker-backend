@@ -16,6 +16,7 @@ import com.villagebooker.repo.review.ReviewReportRepo;
 import com.villagebooker.repo.review.ReviewReportRepo.PendingReview;
 import com.villagebooker.repo.review.ReviewRepo;
 import com.villagebooker.repo.user.UserRepo;
+import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.listing.PublicListingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,10 +41,12 @@ public class ReviewReportService {
     private final ReviewRepo reviewRepo;
     private final UserRepo userRepo;
     private final Clock clock;
+    private final EmailVerificationService emailVerification;
 
     // any signed-in user who can see the review, the listing's host too; not its author
     @Transactional
     public ReviewReportResponse report(Long userId, Long reviewId, ReviewReportRequest request) {
+        emailVerification.requireVerified(userId);
         Review review = reviewRepo.findWithBookingById(reviewId)
                 .filter(r -> r.getDeletedAt() == null)
                 .filter(r -> PublicListingService.VISIBLE.contains(r.getBooking().getListing().getStatus()))

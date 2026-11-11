@@ -1,6 +1,9 @@
 package com.villagebooker.controller.listing;
 
 import com.jayway.jsonpath.JsonPath;
+import com.villagebooker.model.User;
+import com.villagebooker.repo.user.UserRepo;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +31,9 @@ class OwnerListingFlowTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private UserRepo userRepo;
 
     @Test
     void ownerCreatesAccommodationWaitingForApproval() throws Exception {
@@ -191,6 +197,10 @@ class OwnerListingFlowTest {
                                 """.formatted(UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
+        Long id = ((Number) JsonPath.read(body, "$.user.id")).longValue();
+        User user = userRepo.findById(id).orElseThrow();
+        user.setEmailVerifiedAt(Instant.now());
+        userRepo.saveAndFlush(user);
         return JsonPath.read(body, "$.accessToken");
     }
 

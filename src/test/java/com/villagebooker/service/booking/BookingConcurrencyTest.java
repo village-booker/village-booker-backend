@@ -332,6 +332,7 @@ class BookingConcurrencyTest {
         user.setRole(Role.USER);
         user.setTermsVersion(terms.version());
         user.setTermsAcceptedAt(Instant.now());
+        user.setEmailVerifiedAt(Instant.now());
         Long id = userRepo.save(user).getId();
         userIds.add(id);
         return id;

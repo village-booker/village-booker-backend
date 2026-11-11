@@ -8,6 +8,7 @@ import com.villagebooker.dto.user.UpdateProfileRequest;
 import com.villagebooker.dto.user.UpdateLanguageRequest;
 import com.villagebooker.dto.user.UserResponse;
 import com.villagebooker.security.AuthUser;
+import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.user.ProfileImageService;
 import com.villagebooker.service.user.UserService;
 import jakarta.validation.Valid;
@@ -34,11 +35,19 @@ public class UserController {
 
     private final UserService userService;
     private final ProfileImageService profileImageService;
+    private final EmailVerificationService emailVerificationService;
 
     // the logged-in user, fresh from the database (role, host flag...)
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal AuthUser authUser) {
         return userService.getById(authUser.id());
+    }
+
+    // a new confirmation link (the first one is sent at registration)
+    @PostMapping("/me/verification-email")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resendVerificationEmail(@AuthenticationPrincipal AuthUser authUser) {
+        emailVerificationService.resend(authUser.id());
     }
 
     // language switch (SR / EN); the frontend translates the UI and error codes, this only remembers the choice

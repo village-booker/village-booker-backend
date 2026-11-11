@@ -18,6 +18,7 @@ import com.villagebooker.enums.user.Role;
 import com.villagebooker.model.User;
 import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.security.JwtService;
+import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +39,7 @@ public class UserService {
     private final TransactionTemplate tx;
     private final TermsProperties terms;
     private final Clock clock;
+    private final EmailVerificationService emailVerification;
 
     @Transactional(readOnly = true)
     public UserResponse getById(Long id) {
@@ -53,6 +55,7 @@ public class UserService {
         if (user.getRole() == Role.ADMIN) {
             throw new ForbiddenException(ErrorCode.ADMIN_CANNOT_BE_HOST, "An admin account cannot become a host.");
         }
+        emailVerification.requireVerified(userId);
         String bankAccount = normalizeBankAccount(request.bankAccount());
 
         user.setBankAccount(bankAccount);

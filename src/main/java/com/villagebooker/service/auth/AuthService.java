@@ -16,6 +16,7 @@ import com.villagebooker.repo.user.UserRepo;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -32,18 +33,23 @@ public class AuthService {
     private final JwtService jwtService;
     private final TermsProperties terms;
     private final Clock clock;
+    private final EmailVerificationService emailVerification;
+    private final TransactionTemplate tx;
 
     // compared against when the email does not exist, so a failed login takes the same time either way
     // (otherwise response time reveals which emails are registered)
     private final String dummyPasswordHash;
 
     public AuthService(UserRepo userRepo, PasswordEncoder passwordEncoder, JwtService jwtService,
-                       TermsProperties terms, Clock clock) {
+                       TermsProperties terms, Clock clock, EmailVerificationService emailVerification,
+                       TransactionTemplate tx) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.terms = terms;
         this.clock = clock;
+        this.emailVerification = emailVerification;
+        this.tx = tx;
         this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-timing");
     }
 
@@ -69,8 +75,12 @@ public class AuthService {
         user.setTermsVersion(terms.version());
         user.setTermsAcceptedAt(Instant.now(clock));
 
-        // a concurrent registration with the same email fails on the unique constraint -> 409 (GlobalExceptionHandler)
-        userRepo.save(user);
+        // a concurrent registration with the same email fails on the unique constraint -> 409 (GlobalExceptionHandler);
+        // the confirmation email is saved with the user and sent after the commit
+        tx.executeWithoutResult(status -> {
+            userRepo.save(user);
+            emailVerification.sendLink(user);
+        });
         return toAuthResponse(user);
     }
 

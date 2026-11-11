@@ -188,6 +188,20 @@ enum MailTemplate {
 
             You can correct it with a change request and it will be reviewed again."""),
 
+    EMAIL_VERIFICATION(
+            "Potvrdite email adresu za Village Booker",
+            """
+            hvala što ste se registrovali. Potvrdite svoju email adresu na ovom linku:
+            {link}
+
+            Link važi do {deadline}. Dok ne potvrdite adresu, možete da razgledate ponudu, ali ne i da rezervišete.""",
+            "Confirm your email address for Village Booker",
+            """
+            thank you for signing up. Confirm your email address here:
+            {link}
+
+            The link is valid until {deadline}. Until you confirm it you can look around, but not book."""),
+
     PASSWORD_RESET(
             "Nova lozinka za Village Booker",
             """

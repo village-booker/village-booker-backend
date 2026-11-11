@@ -24,9 +24,18 @@ public record ListingTestSupport(MockMvc mvc, UserRepo userRepo, JwtService jwtS
     public static final String ADMIN_CHANGE_REQUESTS = "/api/admin/change-requests";
     public static final String ADMIN_IMAGES = "/api/admin/images";
 
-    // registers a new user (a guest); returns the USER token
+    // registers a new user (a guest) with a confirmed email, as if the link was opened; returns the USER token
     public String userToken() throws Exception {
-        String registered = mvc.perform(post("/api/auth/register")
+        String registered = unverifiedUser();
+        User user = userRepo.findById(((Number) JsonPath.read(registered, "$.user.id")).longValue()).orElseThrow();
+        user.setEmailVerifiedAt(Instant.now());
+        userRepo.saveAndFlush(user);
+        return JsonPath.read(registered, "$.accessToken");
+    }
+
+    // registration response of a new user who has not confirmed the email yet
+    public String unverifiedUser() throws Exception {
+        return mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "test-%s@example.com", "password": "secret-pass-123",
@@ -34,7 +43,6 @@ public record ListingTestSupport(MockMvc mvc, UserRepo userRepo, JwtService jwtS
                                 """.formatted(UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        return JsonPath.read(registered, "$.accessToken");
     }
 
     // registers a new user and makes them a host; returns the OWNER token

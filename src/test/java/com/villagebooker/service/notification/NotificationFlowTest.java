@@ -204,7 +204,8 @@ class NotificationFlowTest {
         listener.on(single(BookingCreatedEvent.class));
 
         Long guestId = userRepo.findByEmail(emailOf(guest)).orElseThrow().getId();
-        assertThat(emailRepo.findByRecipientIdOrderById(guestId)).singleElement()
+        // the first email is the confirmation link from registration
+        assertThat(emailRepo.findByRecipientIdOrderById(guestId)).hasSize(2).last()
                 .satisfies(m -> {
                     assertThat(m.getId()).isNotNull();
                     assertThat(m.getStatus()).isEqualTo(EmailStatus.PENDING);

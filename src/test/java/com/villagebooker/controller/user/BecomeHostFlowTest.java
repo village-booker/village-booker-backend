@@ -146,6 +146,10 @@ class BecomeHostFlowTest {
                                 """.formatted(email)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
+        Long id = ((Number) JsonPath.read(body, "$.user.id")).longValue();
+        User user = userRepo.findById(id).orElseThrow();
+        user.setEmailVerifiedAt(Instant.now());
+        userRepo.saveAndFlush(user);
         return JsonPath.read(body, "$.accessToken");
     }
 

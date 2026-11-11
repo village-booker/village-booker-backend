@@ -86,4 +86,9 @@ public class User {
     // seen only by admins
     @Column(name = "block_reason", length = 1000)
     private String blockReason;
+
+    // set when the link from the registration email is opened; booking, becoming a host and reporting a review
+    // need it (EmailVerificationService.requireVerified)
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
 }

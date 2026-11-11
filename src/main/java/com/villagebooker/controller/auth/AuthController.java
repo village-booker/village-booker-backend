@@ -1,12 +1,14 @@
 package com.villagebooker.controller.auth;
 
 import com.villagebooker.service.auth.AuthService;
+import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.auth.PasswordResetService;
 import com.villagebooker.dto.auth.AuthResponse;
 import com.villagebooker.dto.auth.ForgotPasswordRequest;
 import com.villagebooker.dto.auth.LoginRequest;
 import com.villagebooker.dto.auth.RegisterRequest;
 import com.villagebooker.dto.auth.ResetPasswordRequest;
+import com.villagebooker.dto.auth.VerifyEmailRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -40,6 +43,13 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         passwordResetService.requestReset(request);
+    }
+
+    // the link from the registration email; opening it again changes nothing
+    @PostMapping("/verify-email")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        emailVerificationService.verify(request);
     }
 
     @PostMapping("/reset-password")

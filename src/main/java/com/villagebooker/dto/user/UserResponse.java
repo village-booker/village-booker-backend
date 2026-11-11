@@ -15,7 +15,8 @@ public record UserResponse(
         String bankAccount,
         Role role,
         boolean host,
-        Language language
+        Language language,
+        boolean emailVerified
 ) {
 
     public static UserResponse from(User user) {
@@ -29,6 +30,7 @@ public record UserResponse(
                 user.getBankAccount(),
                 user.getRole(),
                 user.getRole() == Role.OWNER,
-                user.getLanguage());
+                user.getLanguage(),
+                user.getEmailVerifiedAt() != null);
     }
 }
