@@ -8,8 +8,8 @@ import com.villagebooker.dto.auth.ResetPasswordRequest;
 import com.villagebooker.model.PasswordResetToken;
 import com.villagebooker.model.User;
 import com.villagebooker.repo.auth.PasswordResetTokenRepo;
-import com.villagebooker.repo.notification.EmailMessageRepo;
 import com.villagebooker.repo.user.UserRepo;
+import com.villagebooker.service.notification.EmailOutbox;
 import com.villagebooker.service.notification.NotificationMails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 
 // "Forgot password": a one-time link by email (saved to email_message like every other email), valid for
 // app.password-reset.timeout. Earlier tokens issued with a password change stay valid until they expire.
@@ -36,7 +37,7 @@ public class PasswordResetService {
 
     private final PasswordResetTokenRepo tokenRepo;
     private final UserRepo userRepo;
-    private final EmailMessageRepo emailRepo;
+    private final EmailOutbox outbox;
     private final NotificationMails mails;
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate tx;
@@ -65,7 +66,7 @@ public class PasswordResetService {
         reset.setCreatedAt(now);
         reset.setExpiresAt(now.plus(properties.timeout()));
         tokenRepo.save(reset);
-        emailRepo.save(mails.passwordReset(user, properties.link() + token, reset.getExpiresAt()));
+        outbox.add(List.of(mails.passwordReset(user, properties.link() + token, reset.getExpiresAt())));
     }
 
     // BCrypt runs before the short transaction (see AuthService); an unknown, used or expired link -> 400.

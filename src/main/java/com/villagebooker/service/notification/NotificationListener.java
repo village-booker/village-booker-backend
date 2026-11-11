@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 // Spec 14 with an outbox: the emails are saved just before the publishing transaction commits, so they see its
-// final state (cancellation reason, refunds) and roll back with it. Sending is not part of this (no provider yet).
+// final state (cancellation reason, refunds) and roll back with it; EmailOutbox sends them after the commit.
 // Pending changes are flushed first, so a conflict (@Version) fails here with the same exception as it would at
 // commit. A bug while preparing an email is only logged and never undoes the change; a database error is not caught,
 // since the transaction is rolled back by it anyway.
@@ -24,6 +24,7 @@ public class NotificationListener {
 
     private final NotificationMails mails;
     private final EmailMessageRepo emailRepo;
+    private final EmailOutbox outbox;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void on(BookingCreatedEvent event) {
@@ -56,6 +57,6 @@ public class NotificationListener {
             log.error("Could not prepare the emails for {}", event, e);
             return;
         }
-        emailRepo.saveAll(emails);
+        outbox.add(emails);
     }
 }
