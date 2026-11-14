@@ -69,6 +69,9 @@ public class NotificationMails {
                     List.of(MailTemplate.BOOKING_CANCELLED_BY_OWNER.render(guest, params(b, guest)));
             case CANCELLED_MIN_NOT_REACHED ->
                     List.of(MailTemplate.BOOKING_CANCELLED_MIN_NOT_REACHED.render(guest, params(b, guest)));
+            case CANCELLED_BY_ADMIN -> List.of(
+                    MailTemplate.BOOKING_CANCELLED_BY_ADMIN_GUEST.render(guest, params(b, guest)),
+                    MailTemplate.BOOKING_CANCELLED_BY_ADMIN_OWNER.render(owner(b), params(b, owner(b))));
             case AWAITING_OWNER_APPROVAL, COMPLETED -> List.of();
         };
     }

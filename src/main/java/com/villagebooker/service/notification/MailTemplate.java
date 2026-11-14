@@ -156,6 +156,34 @@ enum MailTemplate {
             {dates}
             You get back everything you paid: {refund}"""),
 
+    BOOKING_CANCELLED_BY_ADMIN_GUEST(
+            "Rezervacija je otkazana: {listing}",
+            """
+            vašu rezervaciju oglasa „{listing}“ otkazala je administracija Village Booker-a.
+            {dates}
+            Razlog: {reason}
+            Vraćamo vam: {refund}""",
+            "Your booking has been cancelled: {listing}",
+            """
+            your booking of "{listing}" has been cancelled by the Village Booker administration.
+            {dates}
+            Reason: {reason}
+            You get back: {refund}"""),
+
+    BOOKING_CANCELLED_BY_ADMIN_OWNER(
+            "Rezervacija je otkazana: {listing}",
+            """
+            rezervaciju vašeg oglasa „{listing}“ (gost: {guest}) otkazala je administracija Village Booker-a.
+            {dates}
+            Razlog: {reason}
+            Gostu se vraća: {refund}""",
+            "A booking has been cancelled: {listing}",
+            """
+            the booking of your listing "{listing}" (guest: {guest}) has been cancelled by the Village Booker administration.
+            {dates}
+            Reason: {reason}
+            Refunded to the guest: {refund}"""),
+
     TOUR_DATE_CONFIRMED(
             "Tura se održava: {listing}",
             """

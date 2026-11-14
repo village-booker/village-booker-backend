@@ -11,6 +11,7 @@ public enum BookingStatus {
     CANCELLED_BY_GUEST,
     CANCELLED_BY_OWNER,
     CANCELLED_MIN_NOT_REACHED,
+    CANCELLED_BY_ADMIN,
     COMPLETED;
 
     // statuses that occupy dates (accommodation) or places (tour date)
@@ -20,5 +21,6 @@ public enum BookingStatus {
     public static final Set<BookingStatus> EXPIRABLE = Set.of(AWAITING_OWNER_APPROVAL, AWAITING_PAYMENT);
 
     // statuses that mean a booking is finished, positively or negatively
-    public static final Set<BookingStatus> FINISHED = Set.of(REJECTED, EXPIRED, CANCELLED_BY_GUEST, CANCELLED_BY_OWNER, CANCELLED_MIN_NOT_REACHED, COMPLETED);
+    public static final Set<BookingStatus> FINISHED = Set.of(REJECTED, EXPIRED, CANCELLED_BY_GUEST, CANCELLED_BY_OWNER, CANCELLED_MIN_NOT_REACHED,
+            CANCELLED_BY_ADMIN, COMPLETED);
 }

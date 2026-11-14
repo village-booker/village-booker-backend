@@ -47,8 +47,17 @@ public class BookingCanceller {
         if (status != BookingStatus.CANCELLED_MIN_NOT_REACHED) {
             requireNotStarted(booking);
         }
+        return cancel(booking, status, reason, Refunds.percentage(booking, status, Instant.now(clock)));
+    }
+
+    // the admin also cancels a stay or tour that has begun, and decides the refund instead of the policy table
+    public CancellationResponse cancelByAdmin(Booking booking, String reason, BigDecimal refundPercentage) {
+        BookingTransitions.check(booking.getStatus(), BookingStatus.CANCELLED_BY_ADMIN);
+        return cancel(booking, BookingStatus.CANCELLED_BY_ADMIN, reason, refundPercentage);
+    }
+
+    private CancellationResponse cancel(Booking booking, BookingStatus status, String reason, BigDecimal percentage) {
         Instant now = Instant.now(clock);
-        BigDecimal percentage = Refunds.percentage(booking, status, now);
         statusChanger.moveTo(booking, status);
         booking.setCancelledAt(now);
         booking.setCancellationReason(reason == null || reason.isBlank() ? null : reason.trim());

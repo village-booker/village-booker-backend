@@ -3,6 +3,8 @@ package com.villagebooker.service.booking;
 import com.villagebooker.common.time.AppTime;
 import com.villagebooker.dto.booking.AdminBookingDetailResponse;
 import com.villagebooker.dto.booking.AdminBookingResponse;
+import com.villagebooker.dto.booking.AdminCancellationRequest;
+import com.villagebooker.dto.booking.CancellationResponse;
 import com.villagebooker.dto.booking.OwnerCancellationStatsResponse;
 import com.villagebooker.dto.common.PageResponse;
 import com.villagebooker.enums.booking.BookingStatus;
@@ -18,13 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 
-// Read-only for now: the admin sees every booking and how often hosts cancel (spec 9.4, penalties by hand).
+// The admin sees every booking and how often hosts cancel (spec 9.4, penalties by hand) and cancels a booking
+// that the guest and the host cannot sort out themselves (a stay that has begun, a blocked host).
 @Service
 @RequiredArgsConstructor
 public class AdminBookingService {
 
     private final BookingRepo bookingRepo;
     private final PaymentRepo paymentRepo;
+    private final BookingCanceller canceller;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -51,6 +55,12 @@ public class AdminBookingService {
         Booking booking = bookingRepo.findWithPartiesById(bookingId)
                 .orElseThrow(() -> BookingService.bookingNotFound(bookingId));
         return AdminBookingDetailResponse.from(booking, paymentRepo.findByBookingIdOrderById(bookingId));
+    }
+
+    @Transactional
+    public CancellationResponse cancel(Long bookingId, AdminCancellationRequest request) {
+        Booking booking = bookingRepo.findById(bookingId).orElseThrow(() -> BookingService.bookingNotFound(bookingId));
+        return canceller.cancelByAdmin(booking, request.reason(), request.refundPercentage());
     }
 
     // pageable without a sort: the query orders by the number of cancellations

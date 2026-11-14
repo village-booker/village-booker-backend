@@ -151,11 +151,68 @@ class AdminBookingFlowTest {
     }
 
     @Test
+    void adminCancelsAStayThatHasBegunAndDecidesTheRefund() throws Exception {
+        Long cabin = approved(support.create(host, "/accommodations", BookingTestSupport.depositJson()));
+        Long paid = bookings.bookApproved(guest, host, cabin, d, d.plusDays(2), 2);
+        bookings.pay(guest, paid).andExpect(status().isOk());
+        Booking booking = bookingRepo.findById(paid).orElseThrow();
+        booking.setStartDate(AppTime.today(clock).minusDays(1));
+        bookingRepo.flush();
+
+        // the guest and the host can no longer cancel it
+        mvc.perform(post("/api/bookings/" + paid + "/cancel").header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("BOOKING_ALREADY_STARTED"));
+
+        cancelAsAdmin(paid, "{\"reason\": \"Cabin flooded\", \"refundPercentage\": 101}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.refundPercentage.code").value("DecimalMax"));
+        cancelAsAdmin(paid, "{\"refundPercentage\": 40}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.reason").exists());
+
+        // 30 % deposit of 10 000 = 3 000 paid, 40 % of it goes back
+        cancelAsAdmin(paid, "{\"reason\": \"  Cabin flooded  \", \"refundPercentage\": 40}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.booking.status").value("CANCELLED_BY_ADMIN"))
+                .andExpect(jsonPath("$.booking.cancellationReason").value("Cabin flooded"))
+                .andExpect(jsonPath("$.paidAmount").value(3000.0))
+                .andExpect(jsonPath("$.refundAmount").value(1200.0));
+        mvc.perform(get(ADMIN_BOOKINGS + "/" + paid).header(HttpHeaders.AUTHORIZATION, "Bearer " + admin))
+                .andExpect(jsonPath("$.booking.cancelledAt").exists())
+                .andExpect(jsonPath("$.payments[0].status").value("REFUNDED"))
+                .andExpect(jsonPath("$.payments[0].refundAmount").value(1200.0));
+
+        cancelAsAdmin(paid, "{\"reason\": \"Again\", \"refundPercentage\": 100}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("BOOKING_STATUS_INVALID"));
+        cancelAsAdmin(Long.MAX_VALUE, "{\"reason\": \"Missing\", \"refundPercentage\": 0}")
+                .andExpect(status().isNotFound());
+        // not a host's cancellation, so no penalty count
+        String body = cancellations("?size=100").andReturn().getResponse().getContentAsString();
+        assertThat(countFor(body, idOf(host))).isEmpty();
+    }
+
+    @Test
     void onlyAdminsSeeAllBookings() throws Exception {
         mvc.perform(get(ADMIN_BOOKINGS).header(HttpHeaders.AUTHORIZATION, "Bearer " + host))
                 .andExpect(status().isForbidden());
         mvc.perform(get(ADMIN_BOOKINGS + "/owner-cancellations").header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
                 .andExpect(status().isForbidden());
+        Long cabin = approved(support.createAccommodation(host));
+        Long booking = bookings.book(guest, cabin, d, d.plusDays(1), 2);
+        mvc.perform(post(ADMIN_BOOKINGS + "/" + booking + "/cancel")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + host)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\": \"x\", \"refundPercentage\": 100}"))
+                .andExpect(status().isForbidden());
+    }
+
+    private ResultActions cancelAsAdmin(Long bookingId, String json) throws Exception {
+        return mvc.perform(post(ADMIN_BOOKINGS + "/" + bookingId + "/cancel")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json));
     }
 
     private Long approved(Long listingId) throws Exception {

@@ -132,6 +132,27 @@ class NotificationFlowTest {
     }
 
     @Test
+    void anAdminCancellationMailsBothSidesWithoutARefundLineWhenNothingGoesBack() throws Exception {
+        Long listingId = support.createAccommodation(owner);
+        support.approveListing(admin, listingId).andExpect(status().isOk());
+        LocalDate arrival = AppTime.today(clock).plusDays(20);
+        Long bookingId = bookings.book(guest, listingId, arrival, arrival.plusDays(1), 2);
+
+        mvc.perform(post("/api/admin/bookings/" + bookingId + "/cancel")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\": \"Domaćin je blokiran\", \"refundPercentage\": 100}"))
+                .andExpect(status().isOk());
+
+        List<EmailMessage> sent = mails.bookingStatusChanged(lastStatusChange(BookingStatus.CANCELLED_BY_ADMIN));
+        assertThat(sent).extracting(NotificationFlowTest::address).containsExactly(emailOf(guest), emailOf(owner));
+        assertThat(sent.get(0).getSubject()).isEqualTo("Rezervacija je otkazana: Brvnara na Tari");
+        assertThat(sent.get(0).getBody()).contains("otkazala je administracija", "Razlog: Domaćin je blokiran")
+                .doesNotContain("Vraćamo vam");
+        assertThat(sent.get(1).getBody()).contains("(gost: Ana Anić)").doesNotContain("Gostu se vraća");
+    }
+
+    @Test
     void aRejectionWithoutAReasonLeavesTheReasonLineOut() throws Exception {
         Long listingId = support.createAccommodation(owner);
         support.approveListing(admin, listingId).andExpect(status().isOk());

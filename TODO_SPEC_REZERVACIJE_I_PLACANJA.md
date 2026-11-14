@@ -44,7 +44,7 @@ Enumi:
 
 | Spec | Kod |
 |---|---|
-| `StatusRezervacije`: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`, `ODBIJENO`, `ISTEKLO`, `OTKAZANO_KORISNIK`, `OTKAZANO_VLASNIK`, `OTKAZANO_NEDOVOLJNO_PRIJAVA`, `ZAVRSENO` | `BookingStatus`: `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT`, `CONFIRMED`, `REJECTED`, `EXPIRED`, `CANCELLED_BY_GUEST`, `CANCELLED_BY_OWNER`, `CANCELLED_MIN_NOT_REACHED`, `COMPLETED` |
+| `StatusRezervacije`: `CEKA_POTVRDU_VLASNIKA`, `CEKA_PLACANJE`, `ODOBRENO`, `ODBIJENO`, `ISTEKLO`, `OTKAZANO_KORISNIK`, `OTKAZANO_VLASNIK`, `OTKAZANO_NEDOVOLJNO_PRIJAVA`, `OTKAZANO_ADMIN`, `ZAVRSENO` | `BookingStatus`: `AWAITING_OWNER_APPROVAL`, `AWAITING_PAYMENT`, `CONFIRMED`, `REJECTED`, `EXPIRED`, `CANCELLED_BY_GUEST`, `CANCELLED_BY_OWNER`, `CANCELLED_MIN_NOT_REACHED`, `CANCELLED_BY_ADMIN`, `COMPLETED` |
 | `StatusTermina`: `OTVOREN`, `POTVRDJEN`, `POPUNJEN`, `OTKAZAN`, `ZAVRSEN` | `TourDateStatus`: `OPEN`, `CONFIRMED`, `FULL`, `CANCELLED`, `COMPLETED` |
 | `StatusUsluge`: `NA_CEKANJU`, `ODOBRENA`, `ODBIJENO`, `PAUZIRANA_VLASNIK`, `OBRISANA`, `UKLONJENA_ADMIN` | `ListingStatus`: `PENDING`, `APPROVED`, `REJECTED`, `PAUSED_BY_OWNER`, `DELETED`, `REMOVED_BY_ADMIN` |
 | `StatusPlacanja`: `NA_CEKANJU`, `USPESNO`, `NEUSPESNO`, `REFUNDIRANO` | `PaymentStatus`: `PENDING`, `SUCCEEDED`, `FAILED`, `REFUNDED` |
@@ -153,6 +153,7 @@ ukupnaCena  = cena za noc * broj noci
 - `OTKAZANO_KORISNIK`
 - `OTKAZANO_VLASNIK`
 - `OTKAZANO_NEDOVOLJNO_PRIJAVA` (samo tura: termin nije skupio minimum do `rokZaMin`)
+- `OTKAZANO_ADMIN` (odluka tima, novembar 2026: admin resava ono sto gost i domacin ne mogu sami, npr. zapocet boravak ili rezervacije blokiranog domacina)
 - `ZAVRSENO`
 
 Za turu nema posebnog statusa "ceka minimum". Rezervacija je `ODOBRENO`, a da li ce se tura odrzati cita se iz `TerminTure.status` (`OTVOREN` = jos se ceka minimum, `POTVRDJEN`/`POPUNJEN` = sigurno).
@@ -188,6 +189,7 @@ Domacin potvrdjuje svaku rezervaciju (sekcija 1), pa postoje samo dva toka.
 - `-> OTKAZANO_KORISNIK`
 - `-> OTKAZANO_VLASNIK`
 - `-> OTKAZANO_NEDOVOLJNO_PRIJAVA` (scheduler, samo tura)
+- `-> OTKAZANO_ADMIN` (admin, uz razlog; dozvoljeno i kad je boravak ili tura vec pocela)
 
 ### Iznos refunda pri otkazivanju
 
@@ -201,6 +203,7 @@ Osnovica = zbir `iznos` svih `Placanje` sa statusom `USPESNO` za tu rezervaciju.
 | `OTKAZANO_KORISNIK`, posle roka, `PARCIJALNO` | `procenatPovrata`% osnovice |
 | `OTKAZANO_KORISNIK`, posle roka, `BESPLATNO` | 0% |
 | `OTKAZANO_KORISNIK`, `BEZ_POVRATA` | 0% |
+| `OTKAZANO_ADMIN` | procenat koji admin izabere (0..100), bez obzira na politiku |
 
 - Zaokruzivanje: `setScale(2, RoundingMode.HALF_UP)`.
 - Otkazivanje pre bilo kakve uplate (npr. `CEKA_POTVRDU_VLASNIKA`, `NA_LICU_MESTA`) -> nema refunda, samo promena statusa.
@@ -450,7 +453,7 @@ Sledece:
 6. [x] Mejlovi preko dogadjaja (sekcija 14): za sada se samo upisuju u outbox `EmailMessage` (`PENDING`); slanje preko provajdera na kraju.
 7. [x] Recenzije (preracun `rating` / `reviewCount`, odgovor domacina, uklanjanje od strane admina), omiljene, nedostupni periodi, prijava recenzije adminu (`ReviewReport`: korisnik prijavljuje, admin uklanja recenziju ili odbacuje prijave).
    - [x] Admin pregled: korisnici (lista, detalji), sve rezervacije sa uplatama, otkazivanja domacina (9.4).
-   - [x] Blokada korisnika (vazi odmah, i za vec izdate tokene), admin uklanja uslugu (`UKLONJENA_ADMIN`), brisanje usluge bez otkazivanja rezervacija (9.3). Brisanje naloga, sudbina oglasa blokiranog domacina i admin izmena rezervacije: posle odluke tima.
+   - [x] Blokada korisnika (vazi odmah, i za vec izdate tokene), admin uklanja uslugu (`UKLONJENA_ADMIN`), brisanje usluge bez otkazivanja rezervacija (9.3). Oglasi blokiranog domacina nisu u pretrazi i ne primaju nove rezervacije; admin otkazuje bilo koju aktivnu rezervaciju (`OTKAZANO_ADMIN`, povrat po izboru admina). Brisanje naloga: posle odluke tima.
 8. Kasnije: Flyway (`EXCLUDE`, `lower(email)`), Stripe (sekcija 7), slanje mejlova iz outbox-a (provajder), penali.
 
 Testovi uz svaki korak:
@@ -478,7 +481,7 @@ Obrazac:
 |---|---|
 | `BookingCreated` | gost (zahtev poslat / potvrdjeno), domacin (nova rezervacija / ceka potvrdu) |
 | `BookingApproved`, `BookingRejected` | gost |
-| `BookingCancelled` | druga strana (gost ili domacin) |
+| `BookingCancelled` | druga strana (gost ili domacin); `OTKAZANO_ADMIN` -> i gost i domacin |
 | `BookingExpired` | gost |
 | `TourDateConfirmed` (skupljen minimum) | svi gosti termina |
 | `TourDateCancelled` (minimum nije skupljen / vlasnik otkazao) | svi gosti termina |
