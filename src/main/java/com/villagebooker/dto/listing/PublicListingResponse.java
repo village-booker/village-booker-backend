@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.List;
 
 // What a guest sees on a listing page: no moderation data, only APPROVED images, the host without contact details.
-// bookable = false for a listing paused by its owner (visible to guests who already booked it, but no new bookings).
+// bookable = false for a listing paused by its owner or whose host is blocked (visible, but no new bookings).
 // tourDates: upcoming dates with free places (TOUR only, otherwise empty).
 public record PublicListingResponse(
         Long id,

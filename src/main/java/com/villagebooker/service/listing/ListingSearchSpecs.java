@@ -39,6 +39,7 @@ final class ListingSearchSpecs {
         return (root, query, cb) -> {
             List<Predicate> where = new ArrayList<>();
             where.add(cb.equal(root.get("status"), ListingStatus.APPROVED));
+            where.add(cb.isNull(root.get("owner").get("blockedAt")));
 
             if (hasText(r.q())) {
                 String like = "%" + escapeLike(r.q().trim().toLowerCase(Locale.ROOT)) + "%";

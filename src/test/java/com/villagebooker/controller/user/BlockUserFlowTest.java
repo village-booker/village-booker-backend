@@ -2,6 +2,7 @@ package com.villagebooker.controller.user;
 
 import com.jayway.jsonpath.JsonPath;
 import com.villagebooker.config.TermsProperties;
+import com.villagebooker.controller.booking.BookingTestSupport;
 import com.villagebooker.controller.listing.ListingTestSupport;
 import com.villagebooker.enums.listing.ListingStatus;
 import com.villagebooker.repo.listing.ListingRepo;
@@ -17,6 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.UUID;
 
 import static com.villagebooker.controller.listing.ListingTestSupport.OWNER;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,6 +124,40 @@ class BlockUserFlowTest {
         mvc.perform(post(OWNER + "/" + listingId + "/pause").header(HttpHeaders.AUTHORIZATION, "Bearer " + host))
                 .andExpect(status().isForbidden());
         assertThat(listingRepo.findById(listingId).orElseThrow().getStatus()).isEqualTo(ListingStatus.APPROVED);
+    }
+
+    @Test
+    void blockedHostsListingsLeaveTheSearchAndTakeNoNewBookingsButOldOnesStay() throws Exception {
+        String host = support.ownerToken();
+        Long hostId = idOf(host);
+        String name = "Vajat " + UUID.randomUUID();
+        Long listingId = support.create(host, "/accommodations",
+                ListingTestSupport.accommodationJson().replace("Brvnara na Tari", name));
+        support.approveListing(admin, listingId).andExpect(status().isOk());
+        LocalDate arrival = LocalDate.now().plusDays(10);
+        BookingTestSupport bookings = new BookingTestSupport(mvc);
+        Long bookingId = bookings.book(support.userToken(), listingId, arrival, arrival.plusDays(2), 2);
+
+        block(hostId, "Fake listings").andExpect(status().isOk());
+
+        search(name).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/listings/" + listingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookable").value(false));
+        bookings.bookAccommodation(support.userToken(), listingId, arrival.plusDays(5), arrival.plusDays(6), 2)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LISTING_NOT_BOOKABLE"));
+        // the admin deals with the bookings already made
+        mvc.perform(get("/api/admin/bookings/" + bookingId).header(HttpHeaders.AUTHORIZATION, "Bearer " + admin))
+                .andExpect(jsonPath("$.booking.status").value("AWAITING_OWNER_APPROVAL"));
+
+        unblock(hostId).andExpect(status().isOk());
+        search(name).andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/listings/" + listingId)).andExpect(jsonPath("$.bookable").value(true));
+    }
+
+    private ResultActions search(String q) throws Exception {
+        return mvc.perform(get("/api/listings").param("q", q)).andExpect(status().isOk());
     }
 
     @Test

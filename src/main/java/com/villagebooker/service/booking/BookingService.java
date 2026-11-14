@@ -27,6 +27,7 @@ import com.villagebooker.repo.user.UserRepo;
 import com.villagebooker.service.auth.EmailVerificationService;
 import com.villagebooker.service.listing.ListingPrices;
 import com.villagebooker.service.listing.OwnerListingService;
+import com.villagebooker.service.listing.PublicListingService;
 import com.villagebooker.service.notification.BookingCreatedEvent;
 import com.villagebooker.service.notification.TourDateConfirmedEvent;
 import lombok.RequiredArgsConstructor;
@@ -124,13 +125,14 @@ public class BookingService {
         return BookingResponse.from(save(booking));
     }
 
-    // a listing that does not exist for guests (pending, rejected, deleted) is 404; a paused one is visible but closed
+    // a listing that does not exist for guests (pending, rejected, deleted) is 404; a paused one or one whose host
+    // is blocked is visible but closed (the guest is not told why)
     private Listing lockBookableListing(Long listingId, Long guestId) {
         Listing listing = listingRepo.findByIdForUpdate(listingId)
                 .filter(l -> l.getStatus() == ListingStatus.APPROVED || l.getStatus() == ListingStatus.PAUSED_BY_OWNER)
                 .map(l -> (Listing) Hibernate.unproxy(l))
                 .orElseThrow(() -> OwnerListingService.listingNotFound(listingId));
-        if (listing.getStatus() != ListingStatus.APPROVED) {
+        if (!PublicListingService.bookable(listing)) {
             throw new ConflictException(ErrorCode.LISTING_NOT_BOOKABLE,
                     "Listing " + listingId + " does not take bookings at the moment.",
                     Map.of("status", listing.getStatus().name()));

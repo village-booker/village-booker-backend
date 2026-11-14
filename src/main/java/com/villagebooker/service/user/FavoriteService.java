@@ -39,7 +39,7 @@ public class FavoriteService {
         Map<Long, String> images = mainImages.forGuests(page.getContent().stream().map(Favorite::getListing).toList());
         return PageResponse.of(page, f -> new FavoriteResponse(
                 PublicListingService.card(f.getListing(), images.get(f.getListing().getId())),
-                f.getListing().getStatus() == ListingStatus.APPROVED,
+                PublicListingService.bookable(f.getListing()),
                 f.getCreatedAt()));
     }
 

@@ -62,6 +62,11 @@ public class PublicListingService {
     public static final Set<ListingStatus> VISIBLE = Set.of(ListingStatus.APPROVED, ListingStatus.PAUSED_BY_OWNER);
     private static final List<TourDateStatus> BOOKABLE_DATE = List.of(TourDateStatus.OPEN, TourDateStatus.CONFIRMED);
 
+    // a blocked host's listings stay visible but take no new bookings; their existing bookings are left to the admin
+    public static boolean bookable(Listing listing) {
+        return listing.getStatus() == ListingStatus.APPROVED && listing.getOwner().getBlockedAt() == null;
+    }
+
     private final ListingRepo listingRepo;
     private final AccommodationRepo accommodationRepo;
     private final TourRepo tourRepo;
@@ -104,7 +109,7 @@ public class PublicListingService {
                 : List.of();
 
         return new PublicListingResponse(
-                full.id(), full.type(), listing.getStatus() == ListingStatus.APPROVED, full.name(), full.description(),
+                full.id(), full.type(), bookable(listing), full.name(), full.description(),
                 full.minGuests(), full.maxGuests(), full.address(), full.place(),
                 full.municipality(), full.district(), full.latitude(), full.longitude(), full.cancellationPolicy(),
                 full.paymentMethod(), full.depositPercentage(), full.freeCancellationDays(), full.refundPercentage(),
